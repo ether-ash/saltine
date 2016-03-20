@@ -45,6 +45,7 @@ library
     Crypto.Saltine.Core.OneTimeAuth
     Crypto.Saltine.Core.Sign
     Crypto.Saltine.Core.Hash
+    Crypto.Saltine.Core.PasswordHash
     Crypto.Saltine.Core.ScalarMult
     Crypto.Saltine.Class
   other-modules:
