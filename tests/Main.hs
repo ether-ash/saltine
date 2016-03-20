@@ -9,6 +9,7 @@ import AuthProperties (testAuth)
 import OneTimeAuthProperties (testOneTimeAuth)
 import SignProperties (testSign)
 import ScalarMultProperties (testScalarMult)
+import PasswordHashProperties (testPasswordHash)
 
 import Test.Framework
 
@@ -20,5 +21,6 @@ main = defaultMain [
   testAuth,
   testOneTimeAuth,
   testSign,
-  testScalarMult
+  testScalarMult,
+  testPasswordHash
   ]
