@@ -1,4 +1,4 @@
-module Crypto.Saltine.Core.Utils
+module Crypto.Saltine.Core.Random
     (Crypto.Saltine.Internal.Util.randomByteString
     ) where
 
