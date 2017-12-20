@@ -5,7 +5,7 @@ module StreamProperties (
   ) where
 
 import           Util
-import           Crypto.Saltine.Core.Stream
+import           Crypto.Saltine.Unsafe.Stream
 
 import qualified Data.ByteString                      as S
 import           Test.Framework.Providers.QuickCheck2

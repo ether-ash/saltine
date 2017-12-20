@@ -6,7 +6,7 @@ module ScalarMultProperties (
 
 import           Util
 import           Crypto.Saltine.Class
-import           Crypto.Saltine.Core.ScalarMult
+import           Crypto.Saltine.Unsafe.ScalarMult
 
 import qualified Data.ByteString                      as S
 import           Data.Maybe                             (fromJust)

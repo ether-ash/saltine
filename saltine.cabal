@@ -41,14 +41,14 @@ library
                   Crypto.Saltine.Core.SecretBox
                   Crypto.Saltine.Core.AEAD
                   Crypto.Saltine.Core.Box
-                  Crypto.Saltine.Core.Stream
                   Crypto.Saltine.Core.Auth
                   Crypto.Saltine.Core.OneTimeAuth
                   Crypto.Saltine.Core.Sign
                   Crypto.Saltine.Core.Hash
-                  Crypto.Saltine.Core.ScalarMult
                   Crypto.Saltine.Core.Random
                   Crypto.Saltine.Class
+                  Crypto.Saltine.Unsafe.ScalarMult
+                  Crypto.Saltine.Unsafe.Stream
   other-modules:
                   Crypto.Saltine.Internal.Util
 

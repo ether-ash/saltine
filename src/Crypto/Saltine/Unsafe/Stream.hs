@@ -1,5 +1,5 @@
 -- |
--- Module      : Crypto.Saltine.Core.Stream
+-- Module      : Crypto.Saltine.Unsafe.Stream
 -- Copyright   : (c) Joseph Abrahamson 2013
 -- License     : MIT
 --
@@ -8,7 +8,7 @@
 -- Portability : non-portable
 --
 -- Secret-key encryption:
--- "Crypto.Saltine.Core.Stream"
+-- "Crypto.Saltine.Unsafe.Stream"
 --
 -- The 'stream' function produces a sized stream 'ByteString' as a
 -- function of a secret key and a nonce. The 'xor' function encrypts a
@@ -40,14 +40,14 @@
 -- crypto_stream to \"related-key attacks.\" It is the caller's
 -- responsibility to use proper key-derivation functions.
 --
--- "Crypto.Saltine.Core.Stream" is @crypto_stream_xsalsa20@, a
+-- "Crypto.Saltine.Unsafe.Stream" is @crypto_stream_xsalsa20@, a
 -- particular cipher specified in \"Cryptography in NaCl\"
 -- (<http://nacl.cr.yp.to/valid.html>), Section 7. This cipher is
 -- conjectured to meet the standard notion of unpredictability.
 --
 -- This is version 2010.08.30 of the stream.html web page.
 
-module Crypto.Saltine.Core.Stream (
+module Crypto.Saltine.Unsafe.Stream (
   Key, Nonce,
   newKey, newNonce,
   stream, xor
