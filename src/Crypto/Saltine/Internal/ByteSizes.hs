@@ -46,7 +46,13 @@ module Crypto.Saltine.Internal.ByteSizes (
   streamNonce,
   hash,
   shorthash,
-  shorthashKey
+  shorthashKey,
+  generichashMin,
+  generichashMax,
+  generichash,
+  generichashKeyMin,
+  generichashKeyMax,
+  generichashKey
   ) where
 
 import Foreign.C
@@ -62,7 +68,8 @@ secretBoxKey, secretBoxNonce, secretBoxMac, secretBoxZero, secretBoxBoxZero :: I
 sign, signPK, signSK :: Int
 streamKey, streamNonce :: Int
 hash, shorthash, shorthashKey :: Int
-
+generichashMin, generichashMax, generichash :: Int
+generichashKeyMin, generichashKeyMax, generichashKey :: Int
 
 -- Authentication
 -- | Size of a @crypto_auth@ authenticator.
@@ -121,7 +128,7 @@ secretBoxZero    = fromIntegral c_crypto_secretbox_zerobytes
 secretBoxBoxZero = fromIntegral c_crypto_secretbox_boxzerobytes
 
 aead_xchacha20poly1305_ietf_ABYTES :: Int
-aead_xchacha20poly1305_ietf_ABYTES = fromIntegral c_crypto_aead_xchacha20poly1305_ietf_ABYTES 
+aead_xchacha20poly1305_ietf_ABYTES = fromIntegral c_crypto_aead_xchacha20poly1305_ietf_ABYTES
 
 -- Signatures
 -- | The maximum size of a signature prepended to a message to form a
@@ -148,6 +155,24 @@ shorthash    = fromIntegral c_crypto_shorthash_bytes
 -- | The size of a hashing key for the keyed hash function
 -- 'Crypto.Saltine.Internal.Hash.shorthash'.
 shorthashKey = fromIntegral c_crypto_shorthash_keybytes
+-- | The minimum size of a hash resulting from
+-- 'Crypto.Saltine.Unsafe.Hash.generichash'.
+generichashMin = fromIntegral c_crypto_generichash_bytes_min
+-- | The maximum size of a hash resulting from
+-- 'Crypto.Saltine.Unsafe.Hash.generichash'.
+generichashMax = fromIntegral c_crypto_generichash_bytes_max
+-- | The standard size of a hash resulting from
+-- 'Crypto.Saltine.Unsafe.Hash.generichash'.
+generichash = fromIntegral c_crypto_generichash_bytes
+-- | The minimum size of a hashing key for the keyed hash function
+-- 'Crypto.Saltine.Unsafe.Hash.generichash'.
+generichashKeyMin = fromIntegral c_crypto_generichash_keybytes_min
+-- | The maximum size of a hashing key for the keyed hash function
+-- 'Crypto.Saltine.Unsafe.Hash.generichash'.
+generichashKeyMax = fromIntegral c_crypto_generichash_keybytes_max
+-- | The standard size of a hashing key for the keyed hash function
+-- 'Crypto.Saltine.Unsafe.Hash.generichash'.
+generichashKey = fromIntegral c_crypto_generichash_keybytes
 
 -- src/libsodium/crypto_auth/crypto_auth.c
 foreign import ccall "crypto_auth_bytes"
@@ -335,10 +360,18 @@ c_crypto_shorthash_keybytes = 16
 --   c_crypto_generichash_blake2b_blockbytes :: CSize
 
 -- src/libsodium/crypto_generichash/crypto_generichash.c
--- foreign import ccall "crypto_generichash_bytes"
---   c_crypto_generichash_bytes :: CSize
--- foreign import ccall "crypto_generichash_keybytes"
---   c_crypto_generichash_keybytes :: CSize
+foreign import ccall "crypto_generichash_bytes_min"
+  c_crypto_generichash_bytes_min :: CSize
+foreign import ccall "crypto_generichash_bytes_max"
+  c_crypto_generichash_bytes_max :: CSize
+foreign import ccall "crypto_generichash_bytes"
+  c_crypto_generichash_bytes :: CSize
+foreign import ccall "crypto_generichash_keybytes_min"
+  c_crypto_generichash_keybytes_min :: CSize
+foreign import ccall "crypto_generichash_keybytes_max"
+  c_crypto_generichash_keybytes_max :: CSize
+foreign import ccall "crypto_generichash_keybytes"
+  c_crypto_generichash_keybytes :: CSize
 -- foreign import ccall "crypto_generichash_blockbytes"
 --   c_crypto_generichash_blockbytes :: CSize
 

@@ -47,6 +47,7 @@ library
                   Crypto.Saltine.Core.Hash
                   Crypto.Saltine.Core.Random
                   Crypto.Saltine.Class
+                  Crypto.Saltine.Unsafe.Hash
                   Crypto.Saltine.Unsafe.ScalarMult
                   Crypto.Saltine.Unsafe.Stream
   other-modules:
@@ -71,6 +72,7 @@ test-suite tests
   other-modules:
                 AuthProperties
                 BoxProperties
+                HashProperties
                 OneTimeAuthProperties
                 ScalarMultProperties
                 SecretBoxProperties
