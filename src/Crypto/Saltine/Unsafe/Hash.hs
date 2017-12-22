@@ -38,9 +38,12 @@ instance IsEncoding GenerichashKey where
   {-# INLINE encode #-}
 
 -- | Randomly generates a new key for 'generichash'.
-newGenerichashKey :: IO GenerichashKey
-newGenerichashKey = GhK <$> randomByteString Bytes.generichashKey
-
+newGenerichashKey :: Int -> IO GenerichashKey
+newGenerichashKey len
+  | Bytes.generichashKeyMin <= len && len <= Bytes.generichashKeyMax
+  = GhK <$> randomByteString len
+  | otherwise
+  = lengthError len Bytes.generichashKeyMin Bytes.generichashKeyMax
 
 generichashInternal :: ByteString
                     -> Int
@@ -52,9 +55,11 @@ generichashInternal m len k
       constByteStrings [k, m] $ \[(pk, _), (pm, _)] ->
         c_generichash ph (fromIntegral len) pm (fromIntegral $ S.length m) pk (fromIntegral $ S.length k)
   | otherwise
-  = error $ "incorrect length: " ++ show len ++ ", should be between "
-    ++ show Bytes.generichashMin ++ " and " ++ show Bytes.generichashMax
+  = lengthError len Bytes.generichashMin Bytes.generichashMax
 
+lengthError :: Int -> Int -> Int -> a
+lengthError len atLeast atMost =
+  error $ "incorrect length: " ++ show len ++ ", should be between " ++ show atLeast ++ " and " ++ show atMost
 
 foreign import ccall "crypto_generichash"
   c_generichash :: Ptr CChar
@@ -70,4 +75,3 @@ foreign import ccall "crypto_generichash"
                 -> CSize
                 -- ^ Key buffer length
                 -> IO CInt
-                -- ^ _
