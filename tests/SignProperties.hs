@@ -41,8 +41,14 @@ testSign = buildTest $ do
 
     testProperty "Derives keypair from seed"
     $ \(ByteString32 s) (Message m) ->
-        let Just seed = decode $ S.take Bytes.signSeed s
+        let Just seed = decode s
             (sk, pk) = deriveKeypair seed
-        in signOpen pk (sign sk m) == Just m
+        in signOpen pk (sign sk m) == Just m,
+
+    testProperty "Derives public key from secret key"
+    $ \(ByteString32 s) ->
+        let Just seed = decode s
+            (sk, pk) = deriveKeypair seed
+        in derivePublicKey sk == pk
 
     ]
