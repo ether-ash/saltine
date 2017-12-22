@@ -6,7 +6,11 @@ module BoxProperties (
   ) where
 
 import           Util
+import           Crypto.Saltine.Class
 import           Crypto.Saltine.Core.Box
+import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
+import           Crypto.Saltine.Unsafe.Box
+
 import qualified Data.ByteString                      as S
 import           Data.Monoid
 
@@ -64,6 +68,23 @@ rightInverseFailureAfterNMProp1
 rightInverseFailureAfterNMProp1 ck_1for2 ck_2for1 n (Message bs) p =
   Nothing == boxOpenAfterNM ck_2for1 n (perturb (boxAfterNM ck_1for2 n bs) p)
 
+-- | Valid keys can be derived from seed
+deriveKeypairProp
+  :: Nonce -> ByteString32 -> ByteString32 -> Message -> Bool
+deriveKeypairProp n (ByteString32 s1) (ByteString32 s2) (Message m) =
+  let Just seed1 = decode $ S.take Bytes.boxSeed s1
+      Just seed2 = decode $ S.take Bytes.boxSeed s2
+      (sk1, pk1) = deriveKeypair seed1
+      (sk2, pk2) = deriveKeypair seed2
+  in Just m == boxOpen pk1 sk2 n (box pk2 sk1 n m)
+
+derivePublicKeyProp
+  :: ByteString32 -> Bool
+derivePublicKeyProp (ByteString32 s) =
+  let Just seed = decode $ S.take Bytes.boxSeed s
+      (sk, pk) = deriveKeypair seed
+  in pk == derivePublicKey sk
+
 testBox :: Test
 testBox = buildTest $ do
   (sk1, pk1) <- newKeypair
@@ -106,7 +127,11 @@ testBox = buildTest $ do
 
     testGroup "(properties)" [
 
-      testProperty "beforeNM is anti-symmetric" beforeNMCreateSecretKeyProp
+      testProperty "beforeNM is anti-symmetric" beforeNMCreateSecretKeyProp,
+
+      testProperty "deriveKeypair works for all seeds" $ deriveKeypairProp n1,
+
+      testProperty "derivePublicKey works for all secret keys" derivePublicKeyProp
 
       ]
     ]
