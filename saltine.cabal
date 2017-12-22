@@ -47,6 +47,7 @@ library
                   Crypto.Saltine.Core.Hash
                   Crypto.Saltine.Core.Random
                   Crypto.Saltine.Class
+                  Crypto.Saltine.Unsafe.Box
                   Crypto.Saltine.Unsafe.Hash
                   Crypto.Saltine.Unsafe.ScalarMult
                   Crypto.Saltine.Unsafe.Sign

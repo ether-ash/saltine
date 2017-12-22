@@ -23,6 +23,7 @@ module Crypto.Saltine.Internal.ByteSizes (
   authKey,
   boxPK,
   boxSK,
+  boxSeed,
   boxNonce,
   boxZero,
   boxBoxZero,
@@ -61,12 +62,12 @@ import Foreign.C
 -- Constants for
 
 auth, authKey :: Int
-boxPK, boxSK, boxNonce, boxZero, boxBoxZero :: Int
+boxPK, boxSK, boxSeed, boxNonce, boxZero, boxBoxZero :: Int
 boxMac, boxBeforeNM, sealedBox :: Int
 onetime, onetimeKey :: Int
 mult, multScalar :: Int
 secretBoxKey, secretBoxNonce, secretBoxMac, secretBoxZero, secretBoxBoxZero :: Int
-sign, signPK, signSK :: Int
+sign, signPK, signSK, signSeed :: Int
 streamKey, streamNonce :: Int
 hash, shorthash, shorthashKey :: Int
 generichashMin, generichashMax, generichash :: Int
@@ -83,6 +84,8 @@ authKey = fromIntegral c_crypto_auth_keybytes
 boxPK       = fromIntegral c_crypto_box_publickeybytes
 -- | Size of a @crypto_box@ secret key
 boxSK       = fromIntegral c_crypto_box_secretkeybytes
+-- | Size of a @crypto_box@ key derivation seed
+boxSeed     = fromIntegral c_crypto_box_seedbytes
 -- | Size of a @crypto_box@ nonce
 boxNonce    = fromIntegral c_crypto_box_noncebytes
 -- | Size of 0-padding prepended to messages before using @crypto_box@
@@ -188,6 +191,8 @@ foreign import ccall "crypto_box_publickeybytes"
   c_crypto_box_publickeybytes :: CSize
 foreign import ccall "crypto_box_secretkeybytes"
   c_crypto_box_secretkeybytes :: CSize
+foreign import ccall "crypto_box_seedbytes"
+  c_crypto_box_seedbytes :: CSize
 foreign import ccall "crypto_box_beforenmbytes"
   c_crypto_box_beforenmbytes :: CSize
 foreign import ccall "crypto_box_noncebytes"
