@@ -249,50 +249,53 @@ foreign import ccall "crypto_sign_seedbytes"
 --
 -- HARDCODED to be @crypto_aead_xchacha20poly1305_ietf_ABYTES@ for now until Sodium
 -- exports the C constant (is a macro).
-c_crypto_aead_xchacha20poly1305_ietf_ABYTES :: CSize
-c_crypto_aead_xchacha20poly1305_ietf_ABYTES = 16
+-- c_crypto_aead_xchacha20poly1305_ietf_ABYTES :: CSize
+-- c_crypto_aead_xchacha20poly1305_ietf_ABYTES = 16
 
 -- | The size of a @crypto_stream@ or @crypto_stream_xor@
 -- key. HARDCODED to be @crypto_stream_xsalsa20@ for now until Sodium
 -- exports the C constant.
-c_crypto_stream_keybytes :: CSize
-c_crypto_stream_keybytes = 32
+-- c_crypto_stream_keybytes :: CSize
+-- c_crypto_stream_keybytes = 32
 
 -- | The size of a @crypto_stream@ or @crypto_stream_xor@
 -- nonce. HARDCODED to be @crypto_stream_xsalsa20@ for now until
 -- Sodium exports the C constant.
-c_crypto_stream_noncebytes :: CSize
-c_crypto_stream_noncebytes = 24
+-- c_crypto_stream_noncebytes :: CSize
+-- c_crypto_stream_noncebytes = 24
 
 -- | The size of a @crypto_hash@ output hash. HARDCODED to be
 -- @crypto_hash_sha512@ for now until Sodium exports the C constant.
 c_crypto_hash_bytes :: CSize
-c_crypto_hash_bytes = 64
+c_crypto_hash_bytes = c_crypto_hash_sha512_bytes
 
 -- | The size of a @crypto_shorthash@ output hash. HARDCODED to be
 -- @crypto_shorthash_siphash24@ for now until Sodium exports the C
 -- constant.
-c_crypto_shorthash_bytes :: CSize
-c_crypto_shorthash_bytes = 8
+-- c_crypto_shorthash_bytes :: CSize
+-- c_crypto_shorthash_bytes = 8
 
 -- | The size of a @crypto_shorthash@ key. HARDCODED to be
 -- @crypto_shorthash_siphash24@ for now until Sodium exports the C
 -- constant.
-c_crypto_shorthash_keybytes :: CSize
-c_crypto_shorthash_keybytes = 16
+-- c_crypto_shorthash_keybytes :: CSize
+-- c_crypto_shorthash_keybytes = 16
 
+-- src/libsodium/crypto_aead/xchacha20poly1305/sodium/aead_xchacha20poly1305.c
+foreign import ccall "crypto_aead_xchacha20poly1305_ietf_abytes"
+  c_crypto_aead_xchacha20poly1305_ietf_ABYTES :: CSize
 
 -- src/libsodium/crypto_stream/crypto_stream.c
--- foreign import ccall "crypto_stream_keybytes"
---   c_crypto_stream_keybytes :: CSize
--- foreign import ccall "crypto_stream_noncebytes"
---   c_crypto_stream_noncebytes :: CSize
+foreign import ccall "crypto_stream_keybytes"
+  c_crypto_stream_keybytes :: CSize
+foreign import ccall "crypto_stream_noncebytes"
+  c_crypto_stream_noncebytes :: CSize
 
 -- src/libsodium/crypto_shorthash/crypto_shorthash.c
--- foreign import ccall "crypto_shorthash_bytes"
---   c_crypto_shorthash_bytes :: CSize
--- foreign import ccall "crypto_shorthash_keybytes"
---   c_crypto_shorthash_keybytes :: CSize
+foreign import ccall "crypto_shorthash_bytes"
+  c_crypto_shorthash_bytes :: CSize
+foreign import ccall "crypto_shorthash_keybytes"
+  c_crypto_shorthash_keybytes :: CSize
 
 -- Others
 -- ------
@@ -390,8 +393,8 @@ foreign import ccall "crypto_generichash_keybytes"
 --   c_crypto_hash_sha256_bytes :: CSize
 
 -- src/libsodium/crypto_hash/sha512/hash_sha512_api.c
--- foreign import ccall "crypto_hash_sha512_bytes"
---   c_crypto_hash_sha512_bytes :: CSize
+foreign import ccall "crypto_hash_sha512_bytes"
+  c_crypto_hash_sha512_bytes :: CSize
 
 -- src/libsodium/crypto_hashblocks/sha256/hashblocks_sha256_api.c
 -- foreign import ccall "crypto_hashblocks_sha256_statebytes"

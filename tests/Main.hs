@@ -12,6 +12,7 @@ import OneTimeAuthProperties (testOneTimeAuth)
 import SignProperties        (testSign)
 import ScalarMultProperties  (testScalarMult)
 import HashProperties        (testHash)
+import ByteSizeProperties    (testByteSizes)
 import Crypto.Saltine
 
 import Test.Framework
@@ -37,5 +38,6 @@ main = do
         testOneTimeAuth,
         testSign,
         testScalarMult,
-        testHash
+        testHash,
+        testByteSizes
         ]
