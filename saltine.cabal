@@ -49,6 +49,7 @@ library
                   Crypto.Saltine.Class
                   Crypto.Saltine.Unsafe.Hash
                   Crypto.Saltine.Unsafe.ScalarMult
+                  Crypto.Saltine.Unsafe.Sign
                   Crypto.Saltine.Unsafe.Stream
   other-modules:
                   Crypto.Saltine.Internal.Util

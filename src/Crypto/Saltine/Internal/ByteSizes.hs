@@ -42,6 +42,7 @@ module Crypto.Saltine.Internal.ByteSizes (
   sign,
   signPK,
   signSK,
+  signSeed,
   streamKey,
   streamNonce,
   hash,
@@ -138,6 +139,8 @@ sign   = fromIntegral c_crypto_sign_bytes
 signPK = fromIntegral c_crypto_sign_publickeybytes
 -- | The size of a secret key for signing
 signSK = fromIntegral c_crypto_sign_secretkeybytes
+-- | The size of a signature keypair seed
+signSeed = fromIntegral c_crypto_sign_seedbytes
 
 -- Streams
 -- | The size of a key for the cryptographic stream generation
@@ -231,6 +234,8 @@ foreign import ccall "crypto_sign_publickeybytes"
   c_crypto_sign_publickeybytes :: CSize
 foreign import ccall "crypto_sign_secretkeybytes"
   c_crypto_sign_secretkeybytes :: CSize
+foreign import ccall "crypto_sign_seedbytes"
+  c_crypto_sign_seedbytes :: CSize
 
 -- HARDCODED
 -- ---------
