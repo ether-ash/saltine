@@ -1,6 +1,7 @@
 module Crypto.Saltine.Unsafe.Sign (
   Seed,
-  deriveKeypair
+  deriveKeypair,
+  derivePublicKey
   ) where
 
 import           Crypto.Saltine.Class
@@ -37,6 +38,12 @@ deriveKeypair (Seed s) = unsafePerformIO $ do
   --      need to expose keypair insides
   return (fromJust (decode sk), fromJust (decode pk))
 
+derivePublicKey :: SecretKey -> PublicKey
+derivePublicKey sk = fromJust $ decode $
+  snd . buildUnsafeByteString Bytes.signPK $ \pkbuf ->
+    constByteStrings [encode sk] $ \[(ps, _)] ->
+      c_sign_ed25519_sk_to_pk pkbuf ps
+
 foreign import ccall "crypto_sign_seed_keypair"
   c_sign_seed_keypair :: Ptr CChar
                       -- ^ Public key output buffer
@@ -45,3 +52,10 @@ foreign import ccall "crypto_sign_seed_keypair"
                       -> Ptr CChar
                       -- ^ Constant seed buffer
                       -> IO CInt
+
+foreign import ccall "crypto_sign_ed25519_sk_to_pk"
+  c_sign_ed25519_sk_to_pk :: Ptr CChar
+                          -- ^ Public key output buffer
+                          -> Ptr CChar
+                          -- ^ Constant secret key buffer
+                          -> IO CInt
