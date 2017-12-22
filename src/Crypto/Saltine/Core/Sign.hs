@@ -46,7 +46,7 @@ import           Data.ByteString                     (ByteString)
 
 -- $types
 
--- | An opaque 'box' cryptographic secret key.
+-- | An opaque 'sign' cryptographic secret key.
 newtype SecretKey = SK ByteString deriving (Eq, Ord)
 
 instance IsEncoding SecretKey where
@@ -57,7 +57,7 @@ instance IsEncoding SecretKey where
   encode (SK v) = v
   {-# INLINE encode #-}
 
--- | An opaque 'box' cryptographic public key.
+-- | An opaque 'sign' cryptographic public key.
 newtype PublicKey = PK ByteString deriving (Eq, Ord)
 
 instance IsEncoding PublicKey where
