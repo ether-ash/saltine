@@ -74,6 +74,7 @@ test-suite tests
   other-modules:
                 AuthProperties
                 BoxProperties
+                ByteSizeProperties
                 HashProperties
                 OneTimeAuthProperties
                 ScalarMultProperties
