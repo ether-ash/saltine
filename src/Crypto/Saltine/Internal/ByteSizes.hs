@@ -46,7 +46,14 @@ module Crypto.Saltine.Internal.ByteSizes (
   signSeed,
   streamKey,
   streamNonce,
+  salt,
   hash,
+  opslimitInteractive,
+  memlimitInteractive,
+  opslimitModerate,
+  memlimitModerate,
+  opslimitSensitive,
+  memlimitSensitive,
   shorthash,
   shorthashKey,
   generichashMin,
@@ -54,7 +61,8 @@ module Crypto.Saltine.Internal.ByteSizes (
   generichash,
   generichashKeyMin,
   generichashKeyMax,
-  generichashKey
+  generichashKey,
+  passwordHash
   ) where
 
 import Foreign.C
@@ -72,6 +80,11 @@ streamKey, streamNonce :: Int
 hash, shorthash, shorthashKey :: Int
 generichashMin, generichashMax, generichash :: Int
 generichashKeyMin, generichashKeyMax, generichashKey :: Int
+salt, passwordHash :: Int
+opslimitInteractive, memlimitInteractive :: Int
+opslimitModerate, memlimitModerate :: Int
+opslimitSensitive, memlimitSensitive :: Int
+
 
 -- Authentication
 -- | Size of a @crypto_auth@ authenticator.
@@ -180,6 +193,23 @@ generichashKeyMax = fromIntegral c_crypto_generichash_keybytes_max
 -- 'Crypto.Saltine.Unsafe.Hash.generichash'.
 generichashKey = fromIntegral c_crypto_generichash_keybytes
 
+-- Password hashes
+-- | The size of a salt resulting from
+-- 'Core.Saltine.Core.PasswordHash.pwHash'
+salt                = fromIntegral c_crypto_pwhash_saltbytes
+-- | The size of a password hash returned by
+-- 'Core.Saltine.Core.PasswordHash.pwHashStr'
+passwordHash        = fromIntegral c_crypto_pwhash_strbytes
+-- | Settings for fast hashing
+opslimitInteractive = fromIntegral c_crypto_pwhash_opslimit_interactive
+memlimitInteractive = fromIntegral c_crypto_pwhash_memlimit_interactive
+-- | Settings for moderate fast hashing
+opslimitModerate    = fromIntegral c_crypto_pwhash_opslimit_moderate
+memlimitModerate    = fromIntegral c_crypto_pwhash_memlimit_moderate
+-- | Settings for slow hashing
+opslimitSensitive   = fromIntegral c_crypto_pwhash_opslimit_sensitive
+memlimitSensitive   = fromIntegral c_crypto_pwhash_memlimit_sensitive
+
 -- src/libsodium/crypto_auth/crypto_auth.c
 foreign import ccall "crypto_auth_bytes"
   c_crypto_auth_bytes :: CSize
@@ -213,6 +243,24 @@ foreign import ccall "crypto_onetimeauth_bytes"
   c_crypto_onetimeauth_bytes :: CSize
 foreign import ccall "crypto_onetimeauth_keybytes"
   c_crypto_onetimeauth_keybytes :: CSize
+
+-- src/libsodium/crypto_pwhash/crypto_pwhash.c
+foreign import ccall "crypto_pwhash_saltbytes"
+  c_crypto_pwhash_saltbytes :: CSize
+foreign import ccall "crypto_pwhash_strbytes"
+  c_crypto_pwhash_strbytes :: CSize
+foreign import ccall "crypto_pwhash_opslimit_interactive"
+  c_crypto_pwhash_opslimit_interactive :: CSize
+foreign import ccall "crypto_pwhash_memlimit_interactive"
+  c_crypto_pwhash_memlimit_interactive :: CSize
+foreign import ccall "crypto_pwhash_opslimit_moderate"
+  c_crypto_pwhash_opslimit_moderate :: CSize
+foreign import ccall "crypto_pwhash_memlimit_moderate"
+  c_crypto_pwhash_memlimit_moderate :: CSize
+foreign import ccall "crypto_pwhash_opslimit_moderate"
+  c_crypto_pwhash_opslimit_sensitive :: CSize
+foreign import ccall "crypto_pwhash_memlimit_moderate"
+  c_crypto_pwhash_memlimit_sensitive :: CSize
 
 -- src/libsodium/crypto_scalarmult/crypto_scalarmult.c
 foreign import ccall "crypto_scalarmult_bytes"
