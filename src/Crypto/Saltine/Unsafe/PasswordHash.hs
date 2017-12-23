@@ -51,14 +51,14 @@ import qualified Data.ByteString as B
 
 -- | Encapsulates the tuning values for the c_pwhash functions
 data HashingPolicy = HashingPolicy
-  -- | Maximum amount of computations to perform.
+  { opsLimit :: Int
+  -- ^ Maximum amount of computations to perform.
   -- Raising this number will make the function require more CPU cycles
   -- to compute a key.
-  { opsLimit :: Int
-  -- | Maximum amount of RAM that the function will use, in bytes.
+  , memLimit :: Int
+  -- ^ Maximum amount of RAM that the function will use, in bytes.
   -- It is highly recommended to allow the function to use at least 16
   -- megabytes.
-  , memLimit :: Int
   }
 
 -- | A policy for highly sensitive data. It should be noted that deriving
