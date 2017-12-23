@@ -23,8 +23,12 @@ generichash :: ByteString
             -> Maybe GenerichashKey
             -- ^ Optional key
             -> ByteString
-generichash m len Nothing        = generichashInternal m len S.empty
-generichash m len (Just (GhK k)) = generichashInternal m len k
+generichash m len k
+  | Bytes.generichashMin <= len && len <= Bytes.generichashMax
+  = generichashInternal m len k
+  | otherwise
+  = error $ "incorrect length: " ++ show len ++ ", should be between "
+    ++ show Bytes.generichashMin ++ " and " ++ show Bytes.generichashMax
 
 -- | An opaque 'generichashKeyed' cryptographic secret key.
 newtype GenerichashKey = GhK ByteString deriving (Eq, Ord)
@@ -44,16 +48,20 @@ newGenerichashKey = GhK <$> randomByteString Bytes.generichashKey
 
 generichashInternal :: ByteString
                     -> Int
+                    -> Maybe GenerichashKey
                     -> ByteString
-                    -> ByteString
-generichashInternal m len k
-  | Bytes.generichashMin <= len && len <= Bytes.generichashMax
-  = snd . buildUnsafeByteString len $ \ph ->
-      constByteStrings [k, m] $ \[(pk, _), (pm, _)] ->
-        c_generichash ph (fromIntegral len) pm (fromIntegral $ S.length m) pk (fromIntegral $ S.length k)
-  | otherwise
-  = error $ "incorrect length: " ++ show len ++ ", should be between "
-    ++ show Bytes.generichashMin ++ " and " ++ show Bytes.generichashMax
+generichashInternal m len (Just (GhK k)) =
+  snd . buildUnsafeByteString len $ \ph ->
+    constByteStrings [k, m] $ \[(pk, _), (pm, _)] ->
+      c_generichash ph (fromIntegral len)
+                    pm (fromIntegral $ S.length m)
+                    pk (fromIntegral $ S.length k)
+generichashInternal m len Nothing =
+  snd . buildUnsafeByteString len $ \ph ->
+    constByteStrings [m] $ \[(pm, _)] ->
+      c_generichash ph (fromIntegral len)
+                    pm (fromIntegral $ S.length m)
+                    nullPtr 0
 
 
 foreign import ccall "crypto_generichash"
