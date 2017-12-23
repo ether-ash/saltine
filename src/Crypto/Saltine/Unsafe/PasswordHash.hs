@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 -- |
--- Module      : Crypto.Saltine.Core.PasswordHash
+-- Module      : Crypto.Saltine.Unsafe.PasswordHash
 -- Copyright   : (c) Joseph Abrahamson 2013
 -- License     : MIT
 --
@@ -8,7 +8,7 @@
 -- Stability   : experimental
 -- Portability : non-portable
 --
--- Password Hashing: "Crypto.Saltine.Core.PasswordHash"
+-- Password Hashing: "Crypto.Saltine.Unsafe.PasswordHash"
 --
 -- The 'pwHash' function takes a password 'ByteString', a salt 'Salt',
 -- which can be generated using 'genSalt', and a hashing policy
@@ -21,11 +21,11 @@
 -- encrypted password as returned by pwHashStr and checks if it's the
 -- hashed password.
 --
--- "Crypto.Saltine.Core.PasswordHash" is currently a implementation of
+-- "Crypto.Saltine.Unsafe.PasswordHash" is currently a implementation of
 -- Argon2.
 --
 -- This is version 2016.03.20 of the passwordhash.html web page.
-module Crypto.Saltine.Core.PasswordHash (
+module Crypto.Saltine.Unsafe.PasswordHash (
   HashingPolicy(..),
   EncryptedPass(..),
   Salt(..),
@@ -98,7 +98,7 @@ newtype Salt = Salt {salt :: B.ByteString}
 -- | Generates new random salt
 genSalt :: IO Salt
 genSalt = do
-  salt <- randomVector Bytes.salt
+  salt <- randomByteString Bytes.salt
   return Salt{..}
 
 -- | Derives a key from a password and a salt salt.

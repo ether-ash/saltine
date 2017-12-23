@@ -14,9 +14,6 @@ import ScalarMultProperties  (testScalarMult)
 import HashProperties        (testHash)
 import ByteSizeProperties    (testByteSizes)
 import Crypto.Saltine
-import SignProperties (testSign)
-import ScalarMultProperties (testScalarMult)
-import PasswordHashProperties (testPasswordHash)
 
 import Test.Framework
 
@@ -42,6 +39,5 @@ main = do
         testSign,
         testScalarMult,
         testHash,
-        testPasswordHash,
         testByteSizes
         ]

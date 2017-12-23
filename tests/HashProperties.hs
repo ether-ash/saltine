@@ -9,6 +9,7 @@ import           Crypto.Saltine.Class
 import           Crypto.Saltine.Core.Hash
 import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
 import           Crypto.Saltine.Unsafe.Hash
+import           Crypto.Saltine.Unsafe.PasswordHash
 
 import qualified Data.ByteString                      as S
 import           Data.Maybe                             (fromJust)
@@ -17,10 +18,6 @@ import           Test.Framework
 import           Test.QuickCheck
 
 
-deflen, maxlen, minlen :: Int
-deflen = Bytes.generichash
-maxlen = Bytes.generichashMax
-minlen = Bytes.generichashMin
 
 
 abc, shaDigestAbc :: S.ByteString
@@ -35,8 +32,10 @@ shaDigestAbc = S.pack
     ,0x45,0x4d,0x44,0x23,0x64,0x3c,0xe8,0x0e
     ,0x2a,0x9a,0xc9,0x4f,0xa5,0x4c,0xa4,0x9f]
 
+deflen :: Int
+deflen = Bytes.generichash
+
 blakeKey :: GenerichashKey
-blakeTest, blakeDigest :: S.ByteString
 blakeKey = fromJust . decode $ S.pack
     [0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07
     ,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f
@@ -46,9 +45,13 @@ blakeKey = fromJust . decode $ S.pack
     ,0x28,0x29,0x2a,0x2b,0x2c,0x2d,0x2e,0x2f
     ,0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37
     ,0x38,0x39,0x3a,0x3b,0x3c,0x3d,0x3e,0x3f]
+
+blakeTest :: S.ByteString
 blakeTest = S.pack
     [0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07
     ,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f]
+
+blakeDigest :: S.ByteString
 blakeDigest = S.pack
     [0xa0,0xc6,0x5b,0xdd,0xde,0x8a,0xde,0xf5
     ,0x72,0x82,0xb0,0x4b,0x11,0xe7,0xbc,0x8a
@@ -59,6 +62,10 @@ blakeDigest = S.pack
     ,0xa0,0xbd,0x35,0xfb,0x8c,0xfd,0xe5,0x57
     ,0x32,0x9b,0xeb,0xb1,0xf6,0x29,0xee,0x93]
 
+pwhashFilter :: S.ByteString -> Bool
+-- XXX: horrifying hack to reduce the amount of Argon2 hashing
+--      from 20000 to on average ~80 tests
+pwhashFilter bs = S.head (hash bs) /= 0
 
 testHash :: Test
 testHash = buildTest $
@@ -83,6 +90,18 @@ testHash = buildTest $
     $ hash abc == shaDigestAbc,
 
     testProperty "matches test vector for Blake2b"
-    $ generichash blakeTest 64 (Just blakeKey) == blakeDigest
+    $ generichash blakeTest 64 (Just blakeKey) == blakeDigest,
+
+    testProperty "hash and verify password with interactive limits"
+    $ \(Message pass) -> pwhashFilter pass ||
+        pwHashStrVerify pass (pwHashStr pass interactivePolicy),
+
+    testProperty "hash and verify password with moderate limits"
+    $ \(Message pass) -> pwhashFilter pass ||
+        pwHashStrVerify pass (pwHashStr pass moderatePolicy),
+
+    testProperty "hash and verify password with sensitive limits"
+    $ \(Message pass) -> pwhashFilter pass ||
+        pwHashStrVerify pass (pwHashStr pass sensitivePolicy)
 
     ]
