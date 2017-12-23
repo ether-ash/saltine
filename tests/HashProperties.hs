@@ -94,14 +94,14 @@ testHash = buildTest $
 
     testProperty "hash and verify password with interactive limits"
     $ \(Message pass) -> pwhashFilter pass ||
-        pwHashStrVerify pass (pwHashStr pass interactivePolicy),
+        pwhashStrVerify pass (pwhashStr pass interactivePolicy),
 
     testProperty "hash and verify password with moderate limits"
     $ \(Message pass) -> pwhashFilter pass ||
-        pwHashStrVerify pass (pwHashStr pass moderatePolicy),
+        pwhashStrVerify pass (pwhashStr pass moderatePolicy),
 
     testProperty "hash and verify password with sensitive limits"
     $ \(Message pass) -> pwhashFilter pass ||
-        pwHashStrVerify pass (pwHashStr pass sensitivePolicy)
+        pwhashStrVerify pass (pwhashStr pass sensitivePolicy)
 
     ]
