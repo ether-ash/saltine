@@ -46,6 +46,10 @@ testByteSizes = buildTest $
     testProperty "generichash       = 32" $ generichash == 32,
     testProperty "generichashKeyMin = 16" $ generichashKeyMin == 16,
     testProperty "generichashKeyMax = 64" $ generichashKeyMax == 64,
-    testProperty "generichashKey    = 32" $ generichashKey == 32
+    testProperty "generichashKey    = 32" $ generichashKey == 32,
+    testProperty "kxPK              = 32" $ kxPK == 32,
+    testProperty "kxSK              = 32" $ kxSK == 32,
+    testProperty "kxSeed            = 32" $ kxSeed == 32,
+    testProperty "kxSessionKey      = 32" $ kxSessionKey == 32
 
     ]
