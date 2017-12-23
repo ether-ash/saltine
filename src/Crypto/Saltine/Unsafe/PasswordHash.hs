@@ -135,7 +135,7 @@ pwHashStr :: B.ByteString
           -- ^ used HashingPolicy
           -> EncryptedPass
 pwHashStr pass HashingPolicy{..} =
-  EP <$> unsafePerformIO $
+  EP $ unsafePerformIO $
     B.useAsCStringLen pass $ \(passPtr, passLen) ->
     allocaBytes (fromIntegral Bytes.passwordHash) $ \buf -> do
             throwErrnoIfMinus1_ "crypto_pwhash_str" $
