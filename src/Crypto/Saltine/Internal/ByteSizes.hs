@@ -54,7 +54,11 @@ module Crypto.Saltine.Internal.ByteSizes (
   generichash,
   generichashKeyMin,
   generichashKeyMax,
-  generichashKey
+  generichashKey,
+  kxPK,
+  kxSK,
+  kxSeed,
+  kxSessionKey
   ) where
 
 import Foreign.C
@@ -62,6 +66,7 @@ import Foreign.C
 -- Constants for
 
 auth, authKey :: Int
+aead_xchacha20poly1305_ietf_ABYTES :: Int
 boxPK, boxSK, boxSeed, boxNonce, boxZero, boxBoxZero :: Int
 boxMac, boxBeforeNM, sealedBox :: Int
 onetime, onetimeKey :: Int
@@ -72,6 +77,7 @@ streamKey, streamNonce :: Int
 hash, shorthash, shorthashKey :: Int
 generichashMin, generichashMax, generichash :: Int
 generichashKeyMin, generichashKeyMax, generichashKey :: Int
+kxPK, kxSK, kxSeed, kxSessionKey :: Int
 
 -- Authentication
 -- | Size of a @crypto_auth@ authenticator.
@@ -131,7 +137,7 @@ secretBoxZero    = fromIntegral c_crypto_secretbox_zerobytes
 -- @crypto_secretbox_open@ or after using @crypto_secretbox@
 secretBoxBoxZero = fromIntegral c_crypto_secretbox_boxzerobytes
 
-aead_xchacha20poly1305_ietf_ABYTES :: Int
+-- | The size of a @crypto_aead_tag@.
 aead_xchacha20poly1305_ietf_ABYTES = fromIntegral c_crypto_aead_xchacha20poly1305_ietf_ABYTES
 
 -- Signatures
@@ -179,6 +185,16 @@ generichashKeyMax = fromIntegral c_crypto_generichash_keybytes_max
 -- | The standard size of a hashing key for the keyed hash function
 -- 'Crypto.Saltine.Unsafe.Hash.generichash'.
 generichashKey = fromIntegral c_crypto_generichash_keybytes
+
+-- Key exchange
+-- | The size of a public key for key exchange
+kxPK = fromIntegral c_crypto_kx_publickeybytes
+-- | The size of a secret key for key exchange
+kxSK = fromIntegral c_crypto_kx_secretkeybytes
+-- | The size of a seed for deriving a key exchange keypair
+kxSeed = fromIntegral c_crypto_kx_seedbytes
+-- | The size of a session key
+kxSessionKey = fromIntegral c_crypto_kx_sessionkeybytes
 
 -- src/libsodium/crypto_auth/crypto_auth.c
 foreign import ccall "crypto_auth_bytes"
@@ -242,25 +258,26 @@ foreign import ccall "crypto_sign_secretkeybytes"
 foreign import ccall "crypto_sign_seedbytes"
   c_crypto_sign_seedbytes :: CSize
 
+-- src/libsodium/crypto_kx/crypto_kx.c
+foreign import ccall "crypto_kx_publickeybytes"
+  c_crypto_kx_publickeybytes :: CSize
+foreign import ccall "crypto_kx_secretkeybytes"
+  c_crypto_kx_secretkeybytes :: CSize
+foreign import ccall "crypto_kx_sessionkeybytes"
+  c_crypto_kx_sessionkeybytes :: CSize
+foreign import ccall "crypto_kx_seedbytes"
+  c_crypto_kx_seedbytes :: CSize
+
+
 -- HARDCODED
 -- ---------
 
--- | The size of a @crypto_aead_tag@.
---
--- HARDCODED to be @crypto_aead_xchacha20poly1305_ietf_ABYTES@ for now until Sodium
--- exports the C constant (is a macro).
 -- c_crypto_aead_xchacha20poly1305_ietf_ABYTES :: CSize
 -- c_crypto_aead_xchacha20poly1305_ietf_ABYTES = 16
 
--- | The size of a @crypto_stream@ or @crypto_stream_xor@
--- key. HARDCODED to be @crypto_stream_xsalsa20@ for now until Sodium
--- exports the C constant.
 -- c_crypto_stream_keybytes :: CSize
 -- c_crypto_stream_keybytes = 32
 
--- | The size of a @crypto_stream@ or @crypto_stream_xor@
--- nonce. HARDCODED to be @crypto_stream_xsalsa20@ for now until
--- Sodium exports the C constant.
 -- c_crypto_stream_noncebytes :: CSize
 -- c_crypto_stream_noncebytes = 24
 
@@ -269,15 +286,9 @@ foreign import ccall "crypto_sign_seedbytes"
 c_crypto_hash_bytes :: CSize
 c_crypto_hash_bytes = c_crypto_hash_sha512_bytes
 
--- | The size of a @crypto_shorthash@ output hash. HARDCODED to be
--- @crypto_shorthash_siphash24@ for now until Sodium exports the C
--- constant.
 -- c_crypto_shorthash_bytes :: CSize
 -- c_crypto_shorthash_bytes = 8
 
--- | The size of a @crypto_shorthash@ key. HARDCODED to be
--- @crypto_shorthash_siphash24@ for now until Sodium exports the C
--- constant.
 -- c_crypto_shorthash_keybytes :: CSize
 -- c_crypto_shorthash_keybytes = 16
 

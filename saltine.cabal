@@ -49,6 +49,7 @@ library
                   Crypto.Saltine.Class
                   Crypto.Saltine.Unsafe.Box
                   Crypto.Saltine.Unsafe.Hash
+                  Crypto.Saltine.Unsafe.KeyExchange
                   Crypto.Saltine.Unsafe.ScalarMult
                   Crypto.Saltine.Unsafe.Sign
                   Crypto.Saltine.Unsafe.Stream
@@ -76,6 +77,7 @@ test-suite tests
                 BoxProperties
                 ByteSizeProperties
                 HashProperties
+                KeyExchangeProperties
                 OneTimeAuthProperties
                 ScalarMultProperties
                 SecretBoxProperties
