@@ -45,44 +45,46 @@ import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
 import           Control.Applicative
 import           Foreign.C
 import           Foreign.Ptr
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString                   as S
 import           Data.ByteString                     (ByteString)
 
 -- $types
 
 -- | An opaque 'secretbox' cryptographic key.
-newtype Key = Key ByteString deriving (Eq, Ord)
+newtype Key = Key ScrubbedBytes deriving (Eq, Ord)
 
 instance IsEncoding Key where
-  decode v = if S.length v == Bytes.secretBoxKey
-           then Just (Key v)
+  decode v = if B.length v == Bytes.secretBoxKey
+           then Just (Key $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Key v) = v
+  encode (Key v) = B.convert v
   {-# INLINE encode #-}
 
 -- | An opaque 'secretbox' nonce.
-newtype Nonce = Nonce ByteString deriving (Eq, Ord)
+newtype Nonce = Nonce Bytes deriving (Eq, Ord)
 
 instance IsEncoding Nonce where
-  decode v = if S.length v == Bytes.secretBoxNonce
-           then Just (Nonce v)
+  decode v = if B.length v == Bytes.secretBoxNonce
+           then Just (Nonce $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Nonce v) = v
+  encode (Nonce v) = B.convert v
   {-# INLINE encode #-}
 
 instance IsNonce Nonce where
-  zero            = Nonce (S.replicate Bytes.secretBoxNonce 0)
-  nudge (Nonce n) = Nonce (nudgeBS n)
+  zero            = Nonce (B.replicate Bytes.secretBoxNonce 0)
+  nudge (Nonce n) = Nonce (nudgeBA n)
 
 -- | Creates a random key of the correct size for 'secretbox'.
 newKey :: IO Key
-newKey = Key <$> randomByteString Bytes.secretBoxKey
+newKey = Key <$> randomByteArray Bytes.secretBoxKey
 
 -- | Creates a random nonce of the correct size for 'secretbox'.
 newNonce :: IO Nonce
-newNonce = Nonce <$> randomByteString Bytes.secretBoxNonce
+newNonce = Nonce <$> randomByteArray Bytes.secretBoxNonce
 
 
 -- | Encrypts a message. It is infeasible for an attacker to decrypt
@@ -95,17 +97,16 @@ aead :: Key -> Nonce
           -> ByteString
           -- ^ Ciphertext
 aead (Key key) (Nonce nonce) msg aad =
-  snd . buildUnsafeByteString clen $ \pc ->
-    constByteStrings [key, msg, aad, nonce] $ \
-      [(pk, _), (pm, _), (pa, _), (pn, _)] ->
-          c_aead pc nullPtr pm (fromIntegral mlen) pa (fromIntegral alen) nullPtr pn pk
+  snd . buildUnsafeByteArray clen $ \pc ->
+    constByteArray4 key msg aad nonce $ \pk pm pa pn ->
+      c_aead pc nullPtr pm (fromIntegral mlen) pa (fromIntegral alen) nullPtr pn pk
   where mlen    = S.length msg
         alen    = S.length aad
         clen    = mlen + Bytes.aead_xchacha20poly1305_ietf_ABYTES
 
 -- | Decrypts a message. Returns 'Nothing' if the keys and message do
 -- not match.
-aeadOpen :: Key -> Nonce 
+aeadOpen :: Key -> Nonce
          -> ByteString
          -- ^ Ciphertext
          -> ByteString
@@ -113,10 +114,9 @@ aeadOpen :: Key -> Nonce
          -> Maybe ByteString
          -- ^ Message
 aeadOpen (Key key) (Nonce nonce) cipher aad =
-  let (err, vec) = buildUnsafeByteString mlen $ \pm ->
-        constByteStrings [key, cipher, aad, nonce] $ \
-          [(pk, _), (pc, _), (pa, _), (pn, _)] ->
-            c_aead_open pm nullPtr nullPtr pc (fromIntegral clen) pa (fromIntegral alen) pn pk
+  let (err, vec) = buildUnsafeByteArray mlen $ \pm ->
+        constByteArray4 key cipher aad nonce $ \pk pc pa pn ->
+          c_aead_open pm nullPtr nullPtr pc (fromIntegral clen) pa (fromIntegral alen) pn pk
   in hush . handleErrno err $ vec
   where clen   = S.length cipher
         alen   = S.length aad
@@ -132,11 +132,10 @@ aeadDetached :: Key -> Nonce
           -> (ByteString,ByteString)
           -- ^ Tag, Ciphertext
 aeadDetached (Key key) (Nonce nonce) msg aad =
-  buildUnsafeByteString clen $ \pc ->
-   fmap snd . buildUnsafeByteString' tlen $ \pt ->
-    constByteStrings [key, msg, aad, nonce] $ \
-      [(pk, _), (pm, _), (pa, _), (pn, _)] ->
-          c_aead_detached pc pt nullPtr pm (fromIntegral mlen) pa (fromIntegral alen) nullPtr pn pk
+  buildUnsafeByteArray clen $ \pc ->
+   fmap snd . buildUnsafeByteArray' tlen $ \pt ->
+    constByteArray4 key msg aad nonce $ \pk pm pa pn ->
+      c_aead_detached pc pt nullPtr pm (fromIntegral mlen) pa (fromIntegral alen) nullPtr pn pk
   where mlen    = S.length msg
         alen    = S.length aad
         clen    = mlen
@@ -156,10 +155,9 @@ aeadOpenDetached :: Key -> Nonce
 aeadOpenDetached (Key key) (Nonce nonce) tag cipher aad
     | S.length tag /= tlen = Nothing
     | otherwise =
-  let (err, vec) = buildUnsafeByteString len $ \pm ->
-        constByteStrings [key, tag, cipher, aad, nonce] $ \
-          [(pk, _), (pt, _), (pc, _), (pa, _), (pn, _)] ->
-            c_aead_open_detached pm nullPtr pc (fromIntegral len) pt pa (fromIntegral alen) pn pk
+  let (err, vec) = buildUnsafeByteArray len $ \pm ->
+        constByteArray5 key tag cipher aad nonce $ \pk pt pc pa pn ->
+          c_aead_open_detached pm nullPtr pc (fromIntegral len) pt pa (fromIntegral alen) pn pk
   in hush . handleErrno err $ vec
   where len    = S.length cipher
         alen   = S.length aad

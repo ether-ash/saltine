@@ -41,31 +41,33 @@ import           Foreign.Ptr
 import           Foreign.Marshal.Alloc
 import           Foreign.Storable
 import           System.IO.Unsafe
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString                   as S
 import           Data.ByteString                     (ByteString)
 
 -- $types
 
 -- | An opaque 'sign' cryptographic secret key.
-newtype SecretKey = SK ByteString deriving (Eq, Ord)
+newtype SecretKey = SK ScrubbedBytes deriving (Eq, Ord)
 
 instance IsEncoding SecretKey where
-  decode v = if S.length v == Bytes.signSK
-           then Just (SK v)
+  decode v = if B.length v == Bytes.signSK
+           then Just (SK $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (SK v) = v
+  encode (SK v) = B.convert v
   {-# INLINE encode #-}
 
 -- | An opaque 'sign' cryptographic public key.
-newtype PublicKey = PK ByteString deriving (Eq, Ord)
+newtype PublicKey = PK Bytes deriving (Eq, Ord)
 
 instance IsEncoding PublicKey where
-  decode v = if S.length v == Bytes.signPK
-           then Just (PK v)
+  decode v = if B.length v == Bytes.signPK
+           then Just (PK $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (PK v) = v
+  encode (PK v) = B.convert v
   {-# INLINE encode #-}
 
 -- | A convenience type for keypairs
@@ -77,8 +79,8 @@ newKeypair :: IO Keypair
 newKeypair = do
   -- This is a little bizarre and a likely source of errors.
   -- _err ought to always be 0.
-  ((_err, sk), pk) <- buildUnsafeByteString' Bytes.signPK $ \pkbuf ->
-    buildUnsafeByteString' Bytes.signSK $ \skbuf ->
+  ((_err, sk), pk) <- buildUnsafeByteArray' Bytes.signPK $ \pkbuf ->
+    buildUnsafeByteArray' Bytes.signSK $ \skbuf ->
       c_sign_keypair pkbuf skbuf
   return (SK sk, PK pk)
 
@@ -91,8 +93,8 @@ sign :: SecretKey
      -- ^ Signed message
 sign (SK k) m = unsafePerformIO $
   alloca $ \psmlen -> do
-    (_err, sm) <- buildUnsafeByteString' (len + Bytes.sign) $ \psmbuf ->
-      constByteStrings [k, m] $ \[(pk, _), (pm, _)] ->
+    (_err, sm) <- buildUnsafeByteArray' (len + Bytes.sign) $ \psmbuf ->
+      constByteArray2 k m $ \pk pm ->
         c_sign psmbuf psmlen pm (fromIntegral len) pk
     smlen <- peek psmlen
     return $ S.take (fromIntegral smlen) sm
@@ -108,8 +110,8 @@ signOpen :: PublicKey
          -- ^ Maybe the restored message
 signOpen (PK k) sm = unsafePerformIO $
   alloca $ \pmlen -> do
-    (err, m) <- buildUnsafeByteString' smlen $ \pmbuf ->
-      constByteStrings [k, sm] $ \[(pk, _), (psm, _)] ->
+    (err, m) <- buildUnsafeByteArray' smlen $ \pmbuf ->
+      constByteArray2 k sm $ \pk psm ->
         c_sign_open pmbuf pmlen psm (fromIntegral smlen) pk
     mlen <- peek pmlen
     case err of
@@ -124,12 +126,12 @@ signDetached :: SecretKey
              -> ByteString
              -- ^ Signature
 signDetached (SK k) m = unsafePerformIO $
-    alloca $ \psmlen -> do
-        (_err, sm) <- buildUnsafeByteString' Bytes.sign $ \sigbuf ->
-            constByteStrings [k, m] $ \[(pk, _), (pm, _)] ->
-                c_sign_detached sigbuf psmlen pm (fromIntegral len) pk
-        smlen <- peek psmlen
-        return $ S.take (fromIntegral smlen) sm
+  alloca $ \psmlen -> do
+    (_err, sm) <- buildUnsafeByteArray' Bytes.sign $ \sigbuf ->
+      constByteArray2 k m $ \pk pm ->
+        c_sign_detached sigbuf psmlen pm (fromIntegral len) pk
+    smlen <- peek psmlen
+    return $ S.take (fromIntegral smlen) sm
   where len = S.length m
 
 -- | Returns @True@ if the signature is valid for the given public key and
@@ -141,9 +143,9 @@ signVerifyDetached :: PublicKey
                    -- ^ Message
                    -> Bool
 signVerifyDetached (PK k) sig sm = unsafePerformIO $
-    constByteStrings [k, sig, sm] $ \[(pk, _), (psig, _), (psm, _)] -> do
-        res <- c_sign_verify_detached psig psm (fromIntegral len) pk
-        return (res == 0)
+  constByteArray3 k sig sm $ \pk psig psm -> do
+    res <- c_sign_verify_detached psig psm (fromIntegral len) pk
+    return (res == 0)
   where len = S.length sm
 
 

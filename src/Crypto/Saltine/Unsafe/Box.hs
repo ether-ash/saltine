@@ -15,25 +15,27 @@ import           Foreign.Ptr
 import           Foreign.Marshal.Alloc
 import           Foreign.Storable
 import           System.IO.Unsafe
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString                   as S
 import           Data.ByteString                     (ByteString)
 import           Data.Maybe                          (fromJust)
 
-newtype Seed = Seed ByteString deriving (Eq, Ord)
+newtype Seed = Seed ScrubbedBytes deriving (Eq, Ord)
 
 instance IsEncoding Seed where
-  decode v = if S.length v == Bytes.boxSeed
-           then Just (Seed v)
+  decode v = if B.length v == Bytes.boxSeed
+           then Just (Seed $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Seed v) = v
+  encode (Seed v) = B.convert v
   {-# INLINE encode #-}
 
 deriveKeypair :: Seed -> Keypair
 deriveKeypair (Seed s) = unsafePerformIO $ do
-  ((_err, sk), pk) <- buildUnsafeByteString' Bytes.boxPK $ \pkbuf ->
-    buildUnsafeByteString' Bytes.boxSK $ \skbuf ->
-      constByteStrings [s] $ \[(ps, _)] ->
+  ((_err, sk), pk) <- buildUnsafeByteArray' Bytes.boxPK $ \pkbuf ->
+    buildUnsafeByteArray' Bytes.boxSK $ \skbuf ->
+      constByteArray s $ \ps ->
         c_box_seed_keypair pkbuf skbuf ps
   -- XXX: unbelievably ugly solution but avoids
   --      need to expose keypair insides

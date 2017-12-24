@@ -46,36 +46,38 @@ import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
 import           Control.Applicative
 import           Foreign.C
 import           Foreign.Ptr
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString                   as S
 import           Data.ByteString                     (ByteString)
 
 -- $types
 
 -- | An opaque 'auth' cryptographic key.
-newtype Key           = Key ByteString deriving (Eq, Ord)
+newtype Key           = Key ScrubbedBytes deriving (Eq, Ord)
 
 -- | An opaque 'auth' authenticator.
-newtype Authenticator = Au ByteString  deriving (Eq, Ord)
+newtype Authenticator = Au Bytes  deriving (Eq, Ord)
 
 instance IsEncoding Key where
-  decode v = if S.length v == Bytes.onetimeKey
-           then Just (Key v)
+  decode v = if B.length v == Bytes.onetimeKey
+           then Just (Key $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Key v) = v
+  encode (Key v) = B.convert v
   {-# INLINE encode #-}
 
 instance IsEncoding Authenticator where
-  decode v = if S.length v == Bytes.onetime
-           then Just (Au v)
+  decode v = if B.length v == Bytes.onetime
+           then Just (Au $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Au v) = v
+  encode (Au v) = B.convert v
   {-# INLINE encode #-}
 
 -- | Creates a random key of the correct size for 'auth' and 'verify'.
 newKey :: IO Key
-newKey = Key <$> randomByteString Bytes.onetimeKey
+newKey = Key <$> randomByteArray Bytes.onetimeKey
 
 -- | Builds a keyed 'Authenticator' for a message. This
 -- 'Authenticator' is /impossible/ to forge so long as the 'Key' is
@@ -85,8 +87,8 @@ auth :: Key
      -- ^ Message
      -> Authenticator
 auth (Key key) msg =
-  Au . snd . buildUnsafeByteString Bytes.onetime $ \pa ->
-    constByteStrings [key, msg] $ \[(pk, _), (pm, _)] ->
+  Au . snd . buildUnsafeByteArray Bytes.onetime $ \pa ->
+    constByteArray2 key msg $ \pk pm ->
       c_onetimeauth pa pm (fromIntegral $ S.length msg) pk
 
 -- | Verifies that an 'Authenticator' matches a given message and key.
@@ -97,9 +99,8 @@ verify :: Key
        -> Bool
        -- ^ Is this message authentic?
 verify (Key key) (Au a) msg =
-  unsafeDidSucceed $ constByteStrings [key, msg, a] $ \
-    [(pk, _), (pm, _), (pa, _)] ->
-      return $ c_onetimeauth_verify pa pm (fromIntegral $ S.length msg) pk
+  unsafeDidSucceed $ constByteArray3 key msg a $ \pk pm pa ->
+    return $ c_onetimeauth_verify pa pm (fromIntegral $ S.length msg) pk
 
 foreign import ccall "crypto_onetimeauth"
   c_onetimeauth :: Ptr CChar

@@ -92,6 +92,8 @@ import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
 import           Control.Applicative
 import           Foreign.C
 import           Foreign.Ptr
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString                   as S
 import           Data.ByteString (ByteString)
 
@@ -99,77 +101,78 @@ import           Data.ByteString (ByteString)
 -- $types
 
 -- | An opaque 'box' cryptographic secret key.
-newtype SecretKey = SK ByteString deriving (Eq, Ord)
+newtype SecretKey = SK ScrubbedBytes deriving (Eq, Ord)
 
 instance IsEncoding SecretKey where
-  decode v = if S.length v == Bytes.boxSK
-           then Just (SK v)
+  decode v = if B.length v == Bytes.boxSK
+           then Just (SK $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (SK v) = v
+  encode (SK v) = B.convert v
   {-# INLINE encode #-}
 
 -- | An opaque 'box' cryptographic public key.
-newtype PublicKey = PK ByteString deriving (Eq, Ord)
+newtype PublicKey = PK Bytes deriving (Eq, Ord)
 
 instance IsEncoding PublicKey where
-  decode v = if S.length v == Bytes.boxPK
-           then Just (PK v)
+  decode v = if B.length v == Bytes.boxPK
+           then Just (PK $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (PK v) = v
+  encode (PK v) = B.convert v
   {-# INLINE encode #-}
 
 -- | A convenience type for keypairs
 type Keypair = (SecretKey, PublicKey)
 
 -- | An opaque 'boxAfterNM' cryptographic combined key.
-newtype CombinedKey = CK ByteString deriving (Eq, Ord)
+newtype CombinedKey = CK ScrubbedBytes deriving (Eq, Ord)
 
 instance IsEncoding CombinedKey where
-  decode v = if S.length v == Bytes.boxBeforeNM
-           then Just (CK v)
+  decode v = if B.length v == Bytes.boxBeforeNM
+           then Just (CK $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (CK v) = v
+  encode (CK v) = B.convert v
   {-# INLINE encode #-}
 
 -- | An opaque 'box' nonce.
-newtype Nonce = Nonce ByteString deriving (Eq, Ord)
+newtype Nonce = Nonce Bytes deriving (Eq, Ord)
 
 instance IsEncoding Nonce where
-  decode v = if S.length v == Bytes.boxNonce
-           then Just (Nonce v)
+  decode v = if B.length v == Bytes.boxNonce
+           then Just (Nonce $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Nonce v) = v
+  encode (Nonce v) = B.convert v
   {-# INLINE encode #-}
 
 instance IsNonce Nonce where
-  zero            = Nonce (S.replicate Bytes.boxNonce 0)
-  nudge (Nonce n) = Nonce (nudgeBS n)
+  zero            = Nonce (B.replicate Bytes.boxNonce 0)
+  nudge (Nonce n) = Nonce (nudgeBA n)
 
 -- | Randomly generates a secret key and a corresponding public key.
 newKeypair :: IO Keypair
 newKeypair = do
   -- This is a little bizarre and a likely source of errors.
   -- _err ought to always be 0.
-  ((_err, sk), pk) <- buildUnsafeByteString' Bytes.boxPK $ \pkbuf ->
-    buildUnsafeByteString' Bytes.boxSK $ \skbuf ->
+  ((_err, sk), pk) <- buildUnsafeByteArray' Bytes.boxPK $ \pkbuf ->
+    buildUnsafeByteArray' Bytes.boxSK $ \skbuf ->
       c_box_keypair pkbuf skbuf
   return (SK sk, PK pk)
 
 -- | Randomly generates a nonce for usage with 'box' and 'boxOpen'.
 newNonce :: IO Nonce
-newNonce = Nonce <$> randomByteString Bytes.boxNonce
+newNonce = Nonce <$> randomByteArray Bytes.boxNonce
 
 -- | Build a 'CombinedKey' for sending from 'SecretKey' to
 -- 'PublicKey'. This is a precomputation step which can accelerate
 -- later encryption calls.
 beforeNM :: SecretKey -> PublicKey -> CombinedKey
-beforeNM (SK sk) (PK pk) = CK $ snd $ buildUnsafeByteString Bytes.boxBeforeNM $ \ckbuf ->
-  constByteStrings [pk, sk] $ \[(ppk, _), (psk, _)] ->
-    c_box_beforenm ckbuf ppk psk
+beforeNM (SK sk) (PK pk) =
+  CK $ snd $ buildUnsafeByteArray Bytes.boxBeforeNM $ \ckbuf ->
+    constByteArray2 pk sk $ \ppk psk ->
+      c_box_beforenm ckbuf ppk psk
 
 -- | Encrypts a message for sending to the owner of the public
 -- key. They must have your public key in order to decrypt the
@@ -183,10 +186,9 @@ box :: PublicKey
     -> ByteString
     -- ^ Ciphertext (incl. authentication tag)
 box (PK pk) (SK sk) (Nonce nonce) msg =
-  snd . buildUnsafeByteString bufSize $ \pc ->
-    constByteStrings [pk, sk, msg, nonce] $ \
-      [(ppk, _), (psk, _), (pm, _), (pn, _)] ->
-        c_box_easy pc pm (fromIntegral msgLen) pn ppk psk
+  snd . buildUnsafeByteArray bufSize $ \pc ->
+    constByteArray4 pk sk msg nonce $ \ppk psk pm pn ->
+      c_box_easy pc pm (fromIntegral msgLen) pn ppk psk
   where
     bufSize = S.length msg + Bytes.boxMac
     msgLen  = S.length msg
@@ -200,10 +202,9 @@ boxOpen :: PublicKey -> SecretKey -> Nonce
         -> Maybe ByteString
         -- ^ Message
 boxOpen (PK pk) (SK sk) (Nonce nonce) cipher =
-  let (err, vec) = buildUnsafeByteString bufSize $ \pm ->
-        constByteStrings [pk, sk, cipher, nonce] $ \
-          [(ppk, _), (psk, _), (pc, _), (pn, _)] ->
-            c_box_open_easy pm pc (fromIntegral msgLen) pn ppk psk
+  let (err, vec) = buildUnsafeByteArray bufSize $ \pm ->
+        constByteArray4 pk sk cipher nonce $ \ppk psk pc pn ->
+          c_box_open_easy pm pc (fromIntegral msgLen) pn ppk psk
   in hush . handleErrno err $ vec
   where
     bufSize = S.length cipher - Bytes.boxMac
@@ -217,10 +218,9 @@ boxAfterNM :: CombinedKey
            -> ByteString
            -- ^ Ciphertext (incl. authentication tag)
 boxAfterNM (CK ck) (Nonce nonce) msg =
-  snd . buildUnsafeByteString bufSize $ \pc ->
-    constByteStrings [ck, msg, nonce] $ \
-      [(pck, _), (pm, _), (pn, _)] ->
-        c_box_easy_afternm pc pm (fromIntegral msgLen) pn pck
+  snd . buildUnsafeByteArray bufSize $ \pc ->
+    constByteArray3 ck msg nonce $ \pck pm pn ->
+      c_box_easy_afternm pc pm (fromIntegral msgLen) pn pck
   where
     bufSize = S.length msg + Bytes.boxMac
     msgLen  = S.length msg
@@ -233,10 +233,9 @@ boxOpenAfterNM :: CombinedKey
                -> Maybe ByteString
                -- ^ Message
 boxOpenAfterNM (CK ck) (Nonce nonce) cipher =
-  let (err, vec) = buildUnsafeByteString bufSize $ \pm ->
-        constByteStrings [ck, cipher, nonce] $ \
-          [(pck, _), (pc, _), (pn, _)] ->
-            c_box_open_easy_afternm pm pc (fromIntegral msgLen) pn pck
+  let (err, vec) = buildUnsafeByteArray bufSize $ \pm ->
+        constByteArray3 ck cipher nonce $ \pck pc pn ->
+          c_box_open_easy_afternm pm pc (fromIntegral msgLen) pn pck
   in hush . handleErrno err $ vec
   where
     bufSize = S.length cipher - Bytes.boxMac
@@ -246,10 +245,9 @@ boxOpenAfterNM (CK ck) (Nonce nonce) cipher =
 -- | Encrypts a message for sending to the owner of the public
 -- key. The message is unauthenticated, but permits integrity checking.
 boxSeal :: PublicKey -> ByteString -> IO ByteString
-boxSeal (PK pk) msg = fmap snd . buildUnsafeByteString' bufSize $ \pc ->
-    constByteStrings [pk, msg] $ \
-      [(ppk, _), (pm, _)] ->
-        c_box_seal pc pm (fromIntegral msgLen) ppk
+boxSeal (PK pk) msg = fmap snd . buildUnsafeByteArray' bufSize $ \pc ->
+  constByteArray2 pk msg $ \ppk pm ->
+    c_box_seal pc pm (fromIntegral msgLen) ppk
   where
     bufSize = S.length msg + Bytes.sealedBox
     msgLen  = S.length msg
@@ -265,9 +263,8 @@ boxSealOpen :: PublicKey
             -> Maybe ByteString
             -- ^ Message
 boxSealOpen (PK pk) (SK sk) cipher =
-  let (err, vec) = buildUnsafeByteString bufSize $ \pm ->
-        constByteStrings [pk, sk, cipher] $ \
-          [(ppk, _), (psk, _), (pc, _)] ->
+  let (err, vec) = buildUnsafeByteArray bufSize $ \pm ->
+        constByteArray3 pk sk cipher $ \ppk psk pc ->
           c_box_seal_open pm pc (fromIntegral msgLen) ppk psk
   in hush . handleErrno err $ vec
   where

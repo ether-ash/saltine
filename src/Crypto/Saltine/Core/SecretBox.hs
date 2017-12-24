@@ -51,44 +51,46 @@ import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
 import           Control.Applicative
 import           Foreign.C
 import           Foreign.Ptr
+import qualified Data.ByteArray         as B
+import           Data.ByteArray           (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString                   as S
 import           Data.ByteString                     (ByteString)
 
 -- $types
 
 -- | An opaque 'secretbox' cryptographic key.
-newtype Key = Key ByteString deriving (Eq, Ord)
+newtype Key = Key ScrubbedBytes deriving (Eq, Ord)
 
 instance IsEncoding Key where
-  decode v = if S.length v == Bytes.secretBoxKey
-           then Just (Key v)
+  decode v = if B.length v == Bytes.secretBoxKey
+           then Just (Key $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Key v) = v
+  encode (Key v) = B.convert v
   {-# INLINE encode #-}
 
 -- | An opaque 'secretbox' nonce.
-newtype Nonce = Nonce ByteString deriving (Eq, Ord)
+newtype Nonce = Nonce Bytes deriving (Eq, Ord)
 
 instance IsEncoding Nonce where
-  decode v = if S.length v == Bytes.secretBoxNonce
-           then Just (Nonce v)
+  decode v = if B.length v == Bytes.secretBoxNonce
+           then Just (Nonce $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Nonce v) = v
+  encode (Nonce v) = B.convert v
   {-# INLINE encode #-}
 
 instance IsNonce Nonce where
-  zero            = Nonce (S.replicate Bytes.secretBoxNonce 0)
-  nudge (Nonce n) = Nonce (nudgeBS n)
+  zero            = Nonce (B.replicate Bytes.secretBoxNonce 0)
+  nudge (Nonce n) = Nonce (nudgeBA n)
 
 -- | Creates a random key of the correct size for 'secretbox'.
 newKey :: IO Key
-newKey = Key <$> randomByteString Bytes.secretBoxKey
+newKey = Key <$> randomByteArray Bytes.secretBoxKey
 
 -- | Creates a random nonce of the correct size for 'secretbox'.
 newNonce :: IO Nonce
-newNonce = Nonce <$> randomByteString Bytes.secretBoxNonce
+newNonce = Nonce <$> randomByteArray Bytes.secretBoxNonce
 
 -- | Encrypts a message. It is infeasible for an attacker to decrypt
 -- the message so long as the 'Nonce' is never repeated.
@@ -98,10 +100,9 @@ secretbox :: Key -> Nonce
           -> ByteString
           -- ^ Ciphertext
 secretbox (Key key) (Nonce nonce) msg =
-  unpad' . snd . buildUnsafeByteString len $ \pc ->
-    constByteStrings [key, pad' msg, nonce] $ \
-      [(pk, _), (pm, _), (pn, _)] ->
-        c_secretbox pc pm (fromIntegral len) pn pk
+  unpad' . snd . buildUnsafeByteArray len $ \pc ->
+    constByteArray3 key (pad' msg) nonce $ \pk pm pn ->
+      c_secretbox pc pm (fromIntegral len) pn pk
   where len    = S.length msg + Bytes.secretBoxZero
         pad'   = pad Bytes.secretBoxZero
         unpad' = unpad Bytes.secretBoxBoxZero
@@ -115,27 +116,25 @@ secretboxDetached :: Key -> Nonce
           -> (ByteString,ByteString)
           -- ^ (Authentication Tag, Ciphertext)
 secretboxDetached (Key key) (Nonce nonce) msg =
-  buildUnsafeByteString ctLen $ \pc ->
-   fmap snd . buildUnsafeByteString' tagLen $ \ptag ->
-    constByteStrings [key, msg, nonce] $ \
-      [(pk, _), (pmsg, _), (pn, _)] ->
-        c_secretbox_detached pc ptag pmsg (fromIntegral ptLen) pn pk
+  buildUnsafeByteArray ctLen $ \pc ->
+   fmap snd . buildUnsafeByteArray' tagLen $ \ptag ->
+    constByteArray3 key msg nonce $ \pk pmsg pn ->
+      c_secretbox_detached pc ptag pmsg (fromIntegral ptLen) pn pk
   where ctLen  = ptLen
         ptLen  = S.length msg
         tagLen = Bytes.secretBoxMac
 
 -- | Decrypts a message. Returns 'Nothing' if the keys and message do
 -- not match.
-secretboxOpen :: Key -> Nonce 
+secretboxOpen :: Key -> Nonce
                  -> ByteString
                  -- ^ Ciphertext
                  -> Maybe ByteString
                  -- ^ Message
 secretboxOpen (Key key) (Nonce nonce) cipher =
-  let (err, vec) = buildUnsafeByteString len $ \pm ->
-        constByteStrings [key, pad' cipher, nonce] $ \
-          [(pk, _), (pc, _), (pn, _)] ->
-            c_secretbox_open pm pc (fromIntegral len) pn pk
+  let (err, vec) = buildUnsafeByteArray len $ \pm ->
+        constByteArray3 key (pad' cipher) nonce $ \pk pc pn ->
+          c_secretbox_open pm pc (fromIntegral len) pn pk
   in hush . handleErrno err $ unpad' vec
   where len    = S.length cipher + Bytes.secretBoxBoxZero
         pad'   = pad Bytes.secretBoxBoxZero
@@ -153,10 +152,12 @@ secretboxOpenDetached :: Key -> Nonce
 secretboxOpenDetached (Key key) (Nonce nonce) tag cipher
     | S.length tag /= Bytes.secretBoxMac = Nothing
     | otherwise =
-  let (err, vec) = buildUnsafeByteString len $ \pm ->
-        constByteStrings [key, cipher, tag, nonce] $ \
-          [(pk, _), (pc, _), (pt, _), (pn, _)] ->
-            c_secretbox_open_detached pm pc pt (fromIntegral len) pn pk
+  let (err, vec) = buildUnsafeByteArray len $ \pm ->
+        constByteArray4 key cipher tag nonce $ \pk pc pt pn ->
+          c_secretbox_open_detached pm pc pt (fromIntegral len) pn pk
+        -- constByteStrings [key, cipher, tag, nonce] $ \
+        --   [(pk, _), (pc, _), (pt, _), (pn, _)] ->
+        --     c_secretbox_open_detached pm pc pt (fromIntegral len) pn pk
   in hush . handleErrno err $ vec
   where len    = S.length cipher
 

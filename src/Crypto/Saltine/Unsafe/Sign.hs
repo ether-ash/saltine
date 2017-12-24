@@ -14,25 +14,27 @@ import           Foreign.Ptr
 import           Foreign.Marshal.Alloc
 import           Foreign.Storable
 import           System.IO.Unsafe
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString                   as S
 import           Data.ByteString                     (ByteString)
 import           Data.Maybe                          (fromJust)
 
-newtype Seed = Seed ByteString deriving (Eq, Ord)
+newtype Seed = Seed ScrubbedBytes deriving (Eq, Ord)
 
 instance IsEncoding Seed where
-  decode v = if S.length v == Bytes.signSeed
-           then Just (Seed v)
+  decode v = if B.length v == Bytes.signSeed
+           then Just (Seed $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Seed v) = v
+  encode (Seed v) = B.convert v
   {-# INLINE encode #-}
 
 deriveKeypair :: Seed -> Keypair
 deriveKeypair (Seed s) = unsafePerformIO $ do
-  ((_err, sk), pk) <- buildUnsafeByteString' Bytes.signPK $ \pkbuf ->
-    buildUnsafeByteString' Bytes.signSK $ \skbuf ->
-      constByteStrings [s] $ \[(ps, _)] ->
+  ((_err, sk), pk) <- buildUnsafeByteArray' Bytes.signPK $ \pkbuf ->
+    buildUnsafeByteArray' Bytes.signSK $ \skbuf ->
+      constByteArray s $ \ps ->
         c_sign_seed_keypair pkbuf skbuf ps
   -- XXX: unbelievably ugly solution but avoids
   --      need to expose keypair insides
@@ -40,8 +42,8 @@ deriveKeypair (Seed s) = unsafePerformIO $ do
 
 derivePublicKey :: SecretKey -> PublicKey
 derivePublicKey sk = fromJust $ decode $
-  snd . buildUnsafeByteString Bytes.signPK $ \pkbuf ->
-    constByteStrings [encode sk] $ \[(ps, _)] ->
+  snd . buildUnsafeByteArray Bytes.signPK $ \pkbuf ->
+    constByteArray (encode sk) $ \ps ->
       c_sign_ed25519_sk_to_pk pkbuf ps
 
 foreign import ccall "crypto_sign_seed_keypair"
