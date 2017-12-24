@@ -87,6 +87,7 @@ test-suite tests
                 SignProperties
                 StreamProperties
                 UnsafeAEADProperties
+                UnsafeBoxProperties
                 Util
   ghc-options: -Wall -threaded -rtsopts
   hs-source-dirs: tests

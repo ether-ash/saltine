@@ -14,6 +14,7 @@ import ScalarMultProperties  (testScalarMult)
 import HashProperties        (testHash)
 import ByteSizeProperties    (testByteSizes)
 import UnsafeAEADProperties  (testUnsafeAEAD)
+import UnsafeBoxProperties   (testUnsafeBox)
 import Crypto.Saltine
 
 import Test.Framework
@@ -31,6 +32,7 @@ main = do
   sodiumInit
   flip defaultMainWithOpts runOpts [
         testBox,
+        testUnsafeBox,
         testSealedBox,
         testSecretBox,
         testAEAD,

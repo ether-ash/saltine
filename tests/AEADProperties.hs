@@ -76,7 +76,7 @@ cannotDecryptKeyDetachedProp k1 k2 (Message bs) (Message aad) = do
 testAEAD :: Test
 testAEAD = buildTest $ do
 
-  return $ testGroup "...Unsafe.AEAD" [
+  return $ testGroup "...Core.AEAD" [
 
     testProperty "Can decrypt ciphertext"
     $ ioProperty . uncurry2 rightInverseProp,
