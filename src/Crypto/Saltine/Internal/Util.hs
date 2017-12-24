@@ -117,6 +117,16 @@ constByteArray3 :: (ByteArrayAccess a, ByteArrayAccess b, ByteArrayAccess c)
 constByteArray3 a b c k =
   B.withByteArray a $ \pa -> B.withByteArray b $ \pb -> B.withByteArray c $ \pc -> k pa pb pc
 
+constByteArray4 :: (ByteArrayAccess a, ByteArrayAccess b, ByteArrayAccess c, ByteArrayAccess d)
+                => a -> b -> c -> d -> (BaPtr -> BaPtr -> BaPtr -> BaPtr -> IO e) -> IO e
+constByteArray4 a b c d k =
+  B.withByteArray a $ \pa ->
+  B.withByteArray b $ \pb ->
+  B.withByteArray c $ \pc ->
+  B.withByteArray d $ \pd ->
+  k pa pb pc pd
+
+
 -- | Treats a 'ByteArray' as a little endian bitstring and increments
 -- it.
 nudgeBA :: (ByteArrayAccess a, ByteArray b)
