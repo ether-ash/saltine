@@ -53,6 +53,8 @@ import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
 import           Control.Applicative
 import           Foreign.C
 import           Foreign.Ptr
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString as S
 import           Data.ByteString (ByteString)
 
@@ -63,23 +65,23 @@ hash :: ByteString
      -- ^ Message
      -> ByteString
      -- ^ Hash
-hash m = snd . buildUnsafeByteString Bytes.hash $ \ph ->
-  constByteStrings [m] $ \[(pm, _)] -> c_hash ph pm (fromIntegral $ S.length m)
+hash m = snd . buildUnsafeByteArray Bytes.hash $ \ph ->
+  constByteArray m $ \pm -> c_hash ph pm (fromIntegral $ B.length m)
 
 -- | An opaque 'shorthash' cryptographic secret key.
-newtype ShorthashKey = ShK ByteString deriving (Eq, Ord)
+newtype ShorthashKey = ShK ScrubbedBytes deriving (Eq, Ord)
 
 instance IsEncoding ShorthashKey where
-  decode v = if S.length v == Bytes.shorthashKey
-           then Just (ShK v)
+  decode v = if B.length v == Bytes.shorthashKey
+           then Just (ShK $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (ShK v) = v
+  encode (ShK v) = B.convert v
   {-# INLINE encode #-}
 
 -- | Randomly generates a new key for 'shorthash'.
 newShorthashKey :: IO ShorthashKey
-newShorthashKey = ShK <$> randomByteString Bytes.shorthashKey
+newShorthashKey = ShK <$> randomByteArray Bytes.shorthashKey
 
 -- | Computes a very short, fast keyed hash.
 shorthash :: ShorthashKey
@@ -87,9 +89,9 @@ shorthash :: ShorthashKey
           -- ^ Message
           -> ByteString
           -- ^ Hash
-shorthash (ShK k) m = snd . buildUnsafeByteString Bytes.shorthash $ \ph ->
-  constByteStrings [k, m] $ \[(pk, _), (pm, _)] ->
-    c_shorthash ph pm (fromIntegral $ S.length m) pk
+shorthash (ShK k) m = snd . buildUnsafeByteArray Bytes.shorthash $ \ph ->
+  constByteArray2 k m $ \pk pm ->
+    c_shorthash ph pm (fromIntegral $ B.length m) pk
 
 foreign import ccall "crypto_hash"
   c_hash :: Ptr CChar
