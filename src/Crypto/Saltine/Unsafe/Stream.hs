@@ -60,45 +60,47 @@ import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
 import           Control.Applicative
 import           Foreign.C
 import           Foreign.Ptr
-import qualified Data.ByteString as S
-import           Data.ByteString (ByteString)
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
+import qualified Data.ByteString                   as S
+import           Data.ByteString                     (ByteString)
 
 -- $types
 
 -- | An opaque 'stream' cryptographic key.
-newtype Key = Key ByteString deriving (Eq, Ord)
+newtype Key = Key ScrubbedBytes deriving (Eq, Ord)
 
 instance IsEncoding Key where
-  decode v = if S.length v == Bytes.streamKey
-           then Just (Key v)
+  decode v = if B.length v == Bytes.streamKey
+           then Just (Key $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Key v) = v
+  encode (Key v) = B.convert v
   {-# INLINE encode #-}
 
 -- | An opaque 'stream' nonce.
 newtype Nonce = Nonce ByteString deriving (Eq, Ord)
 
 instance IsNonce Nonce where
-  zero = Nonce (S.replicate Bytes.streamNonce 0)
-  nudge (Nonce n) = Nonce (nudgeBS n)
+  zero = Nonce (B.replicate Bytes.streamNonce 0)
+  nudge (Nonce n) = Nonce (nudgeBA n)
 
 instance IsEncoding Nonce where
-  decode v = if S.length v == Bytes.streamNonce
-           then Just (Nonce v)
+  decode v = if B.length v == Bytes.streamNonce
+           then Just (Nonce $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Nonce v) = v
+  encode (Nonce v) = B.convert v
   {-# INLINE encode #-}
 
 -- | Creates a random key of the correct size for 'stream' and 'xor'.
 newKey :: IO Key
-newKey = Key <$> randomByteString Bytes.streamKey
+newKey = Key <$> randomByteArray Bytes.streamKey
 
 -- | Creates a random nonce of the correct size for 'stream' and
 -- 'xor'.
 newNonce :: IO Nonce
-newNonce = Nonce <$> randomByteString Bytes.streamNonce
+newNonce = Nonce <$> randomByteArray Bytes.streamNonce
 
 -- | Generates a cryptographic random stream indexed by the 'Key' and
 -- 'Nonce'. These streams are indistinguishable from random noise so
@@ -107,9 +109,9 @@ stream :: Key -> Nonce -> Int
        -> ByteString
        -- ^ Cryptographic stream
 stream (Key key) (Nonce nonce) n =
-  snd . buildUnsafeByteString n $ \ps ->
-    constByteStrings [key, nonce] $ \[(pk, _), (pn, _)] ->
-    c_stream ps (fromIntegral n) pn pk
+  snd . buildUnsafeByteArray n $ \ps ->
+    constByteArray2 key nonce $ \pk pn ->
+      c_stream ps (fromIntegral n) pn pk
 
 -- | Computes the exclusive-or between a message and a cryptographic
 -- random stream indexed by the 'Key' and the 'Nonce'. This renders
@@ -124,9 +126,9 @@ xor :: Key -> Nonce
     -> ByteString
     -- ^ Ciphertext
 xor (Key key) (Nonce nonce) msg =
-  snd . buildUnsafeByteString len $ \pc ->
-    constByteStrings [key, nonce, msg] $ \[(pk, _), (pn, _), (pm, _)] ->
-    c_stream_xor pc pm (fromIntegral len) pn pk
+  snd . buildUnsafeByteArray len $ \pc ->
+    constByteArray3 key nonce msg $ \pk pn pm ->
+      c_stream_xor pc pm (fromIntegral len) pn pk
   where len = S.length msg
 
 foreign import ccall "crypto_stream"
