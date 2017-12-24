@@ -140,8 +140,8 @@ constByteArray4 a b c d k =
 
 constByteArray5 :: (ByteArrayAccess a, ByteArrayAccess b, ByteArrayAccess c, ByteArrayAccess d, ByteArrayAccess e)
                 => a -> b -> c -> d -> e
-                -> (BaPtr -> BaPtr -> BaPtr -> BaPtr -> BaPtr -> IO e)
-                -> IO e
+                -> (BaPtr -> BaPtr -> BaPtr -> BaPtr -> BaPtr -> IO x)
+                -> IO x
 constByteArray5 a b c d e k =
   B.withByteArray a $ \pa ->
   B.withByteArray b $ \pb ->
