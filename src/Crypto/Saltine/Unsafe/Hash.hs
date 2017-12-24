@@ -11,8 +11,10 @@ import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
 import           Control.Applicative
 import           Foreign.C
 import           Foreign.Ptr
-import qualified Data.ByteString as S
-import           Data.ByteString (ByteString)
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
+import qualified Data.ByteString                   as S
+import           Data.ByteString                     (ByteString)
 
 -- | Computes a fixed-length fingerprint for an arbitrary long
 -- message using an optional key.
@@ -27,19 +29,19 @@ generichash m len Nothing        = generichashInternal m len S.empty
 generichash m len (Just (GhK k)) = generichashInternal m len k
 
 -- | An opaque 'generichashKeyed' cryptographic secret key.
-newtype GenerichashKey = GhK ByteString deriving (Eq, Ord)
+newtype GenerichashKey = GhK ScrubbedBytes deriving (Eq, Ord)
 
 instance IsEncoding GenerichashKey where
-  decode v = if S.length v >= Bytes.generichashKeyMin && S.length v <= Bytes.generichashKeyMax
-           then Just (GhK v)
+  decode v = if B.length v >= Bytes.generichashKeyMin && S.length v <= Bytes.generichashKeyMax
+           then Just (GhK $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (GhK v) = v
+  encode (GhK v) = B.convert v
   {-# INLINE encode #-}
 
 -- | Randomly generates a new key for 'generichash'.
 newGenerichashKey :: IO GenerichashKey
-newGenerichashKey = GhK <$> randomByteString Bytes.generichashKey
+newGenerichashKey = GhK <$> randomByteArray Bytes.generichashKey
 
 
 generichashInternal :: ByteString
@@ -48,8 +50,8 @@ generichashInternal :: ByteString
                     -> ByteString
 generichashInternal m len k
   | Bytes.generichashMin <= len && len <= Bytes.generichashMax
-  = snd . buildUnsafeByteString len $ \ph ->
-      constByteStrings [k, m] $ \[(pk, _), (pm, _)] ->
+  = snd . buildUnsafeByteArray len $ \ph ->
+      constByteArray2 k m $ \pk pm ->
         c_generichash ph (fromIntegral len) pm (fromIntegral $ S.length m) pk (fromIntegral $ S.length k)
   | otherwise
   = error $ "incorrect length: " ++ show len ++ ", should be between "
