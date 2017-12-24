@@ -6,6 +6,8 @@ import           Foreign.Ptr
 import           System.IO.Unsafe
 
 import           Control.Applicative
+import qualified Data.ByteArray         as B
+import           Data.ByteArray           (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString        as S
 import           Data.ByteString          (ByteString)
 import           Data.ByteString.Unsafe
@@ -88,6 +90,39 @@ randomByteString n =
 -- | To prevent a dependency on package 'errors'
 hush :: Either s a -> Maybe a
 hush = either (const Nothing) Just
+
+type BaPtr = Ptr CChar
+
+-- TODO: ScrubbedBytes for keys
+randomByteArray :: ByteArray a => Int -> IO a
+randomByteArray n =
+  snd <$> buildUnsafeByteArray' n (`c_randombytes_buf` fromIntegral n)
+
+buildUnsafeByteArray' :: ByteArray a => Int -> (Ptr CChar -> IO b) -> IO (b, a)
+buildUnsafeByteArray' n k = B.allocRet n k
+
+buildUnsafeByteArray :: ByteArray a => Int -> (Ptr CChar -> IO b) -> (b, a)
+buildUnsafeByteArray n = unsafePerformIO . buildUnsafeByteArray' n
+
+constByteArray :: ByteArrayAccess a => a -> (Ptr CChar -> IO b) -> IO b
+constByteArray = B.withByteArray
+
+constByteArray2 :: (ByteArrayAccess a, ByteArrayAccess b)
+                => a -> b -> (BaPtr -> BaPtr -> IO e) -> IO e
+constByteArray2 a b k =
+  B.withByteArray a $ \pa -> B.withByteArray b $ \pb -> k pa pb
+
+constByteArray3 :: (ByteArrayAccess a, ByteArrayAccess b, ByteArrayAccess c)
+                => a -> b -> c -> (BaPtr -> BaPtr -> BaPtr -> IO e) -> IO e
+constByteArray3 a b c k =
+  B.withByteArray a $ \pa -> B.withByteArray b $ \pb -> B.withByteArray c $ \pc -> k pa pb pc
+
+-- | Treats a 'ByteArray' as a little endian bitstring and increments
+-- it.
+nudgeBA :: (ByteArrayAccess a, ByteArray b)
+        => a -> b
+nudgeBA = B.convert . nudgeBS . B.convert
+
 
 foreign import ccall "randombytes_buf"
   c_randombytes_buf :: Ptr CChar -> CInt -> IO ()
