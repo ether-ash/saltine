@@ -75,6 +75,7 @@ test-suite tests
   type:    exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+                AEADProperties
                 AuthProperties
                 BoxProperties
                 ByteSizeProperties
@@ -85,7 +86,7 @@ test-suite tests
                 SealedBoxProperties
                 SignProperties
                 StreamProperties
-                AEADProperties
+                UnsafeAEADProperties
                 Util
   ghc-options: -Wall -threaded -rtsopts
   hs-source-dirs: tests

@@ -93,6 +93,9 @@ hush = either (const Nothing) Just
 
 type BaPtr = Ptr CChar
 
+split :: ByteArray a => Int -> a -> (a, a)
+split n ba = (B.take n ba, B.drop n ba)
+
 -- TODO: ScrubbedBytes for keys
 randomByteArray :: ByteArray a => Int -> IO a
 randomByteArray n =

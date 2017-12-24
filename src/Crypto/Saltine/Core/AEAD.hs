@@ -32,10 +32,74 @@
 -- nonces have negligible risk of collision.
 
 module Crypto.Saltine.Core.AEAD (
-  U.Key, U.Nonce,
-  U.aead, U.aeadOpen,
-  U.aeadDetached, U.aeadOpenDetached,
-  U.newKey, U.newNonce
+  U.Key,
+  aead, aeadOpen,
+  aeadDetached, aeadOpenDetached,
+  U.newKey
   ) where
 
-import qualified Crypto.Saltine.Unsafe.AEAD as U
+import           Crypto.Saltine.Class
+import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
+import           Crypto.Saltine.Internal.Util
+import qualified Crypto.Saltine.Unsafe.AEAD        as U
+
+import qualified Data.ByteArray                    as B
+import           Data.ByteString                     (ByteString)
+
+-- | Encrypts a message. It is infeasible for an attacker to decrypt
+-- the message as a random nonce is prepended to the ciphertext.
+aead :: U.Key
+     -> ByteString
+     -- ^ Message
+     -> ByteString
+     -- ^ AAD
+     -> IO ByteString
+     -- ^ Ciphertext
+aead key msg aad = do
+  nonce <- U.newNonce
+  let ciphertext = U.aead key nonce msg aad
+  return $ B.append (encode nonce) ciphertext
+
+-- | Decrypts a message. Returns 'Nothing' if the keys and message do
+-- not match.
+aeadOpen :: U.Key
+         -> ByteString
+         -- ^ Ciphertext
+         -> ByteString
+         -- ^ AAD
+         -> Maybe ByteString
+         -- ^ Message
+aeadOpen key cipher aad = do
+  let (n, c) = split Bytes.secretBoxNonce cipher
+  nonce <- decode n
+  U.aeadOpen key nonce c aad
+
+-- | Encrypts a message. It is infeasible for an attacker to decrypt
+-- the message as a random nonce is prepended to the ciphertext.
+aeadDetached :: U.Key
+             -> ByteString
+             -- ^ Message
+             -> ByteString
+             -- ^ AAD
+             -> IO (ByteString, ByteString)
+             -- ^ Tag, ciphertext
+aeadDetached key msg aad = do
+  nonce <- U.newNonce
+  let (tag, ciphertext) = U.aeadDetached key nonce msg aad
+  return (tag, B.append (encode nonce) ciphertext)
+
+-- | Decrypts a message. Returns 'Nothing' if the keys and message do
+-- not match.
+aeadOpenDetached :: U.Key
+                 -> ByteString
+                 -- ^ Tag
+                 -> ByteString
+                 -- ^ Ciphertext
+                 -> ByteString
+                 -- ^ AAD
+                 -> Maybe ByteString
+                 -- ^ Message
+aeadOpenDetached key tag cipher aad = do
+  let (n, c) = split Bytes.secretBoxNonce cipher
+  nonce <- decode n
+  U.aeadOpenDetached key nonce tag c aad

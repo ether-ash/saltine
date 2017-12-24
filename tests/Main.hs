@@ -13,6 +13,7 @@ import SignProperties        (testSign)
 import ScalarMultProperties  (testScalarMult)
 import HashProperties        (testHash)
 import ByteSizeProperties    (testByteSizes)
+import UnsafeAEADProperties  (testUnsafeAEAD)
 import Crypto.Saltine
 
 import Test.Framework
@@ -33,6 +34,7 @@ main = do
         testSealedBox,
         testSecretBox,
         testAEAD,
+        testUnsafeAEAD,
         testStream,
         testAuth,
         testOneTimeAuth,

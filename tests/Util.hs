@@ -53,3 +53,8 @@ newtype Message = Message S.ByteString deriving (Show)
 
 instance Arbitrary Message where
   arbitrary = Message . S.pack <$> arbitrary
+
+uncurry2 :: (a -> b -> c -> d) -> ((a, b), c) -> d
+uncurry2 = uncurry . uncurry
+uncurry3 :: (a -> b -> c -> d -> e) -> (((a, b), c), d) -> e
+uncurry3 = uncurry . uncurry2
