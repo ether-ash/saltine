@@ -108,23 +108,47 @@ constByteArray :: ByteArrayAccess a => a -> (Ptr CChar -> IO b) -> IO b
 constByteArray = B.withByteArray
 
 constByteArray2 :: (ByteArrayAccess a, ByteArrayAccess b)
-                => a -> b -> (BaPtr -> BaPtr -> IO e) -> IO e
+                => a -> b
+                -> (BaPtr -> BaPtr -> IO e)
+                -> IO e
 constByteArray2 a b k =
-  B.withByteArray a $ \pa -> B.withByteArray b $ \pb -> k pa pb
+  B.withByteArray a $ \pa ->
+  B.withByteArray b $ \pb ->
+  k pa pb
 
 constByteArray3 :: (ByteArrayAccess a, ByteArrayAccess b, ByteArrayAccess c)
-                => a -> b -> c -> (BaPtr -> BaPtr -> BaPtr -> IO e) -> IO e
+                => a -> b -> c
+                -> (BaPtr -> BaPtr -> BaPtr -> IO e)
+                -> IO e
 constByteArray3 a b c k =
-  B.withByteArray a $ \pa -> B.withByteArray b $ \pb -> B.withByteArray c $ \pc -> k pa pb pc
+  B.withByteArray a $ \pa ->
+  B.withByteArray b $ \pb ->
+  B.withByteArray c $ \pc ->
+  k pa pb pc
 
 constByteArray4 :: (ByteArrayAccess a, ByteArrayAccess b, ByteArrayAccess c, ByteArrayAccess d)
-                => a -> b -> c -> d -> (BaPtr -> BaPtr -> BaPtr -> BaPtr -> IO e) -> IO e
+                => a -> b -> c -> d
+                -> (BaPtr -> BaPtr -> BaPtr -> BaPtr -> IO e)
+                -> IO e
 constByteArray4 a b c d k =
   B.withByteArray a $ \pa ->
   B.withByteArray b $ \pb ->
   B.withByteArray c $ \pc ->
   B.withByteArray d $ \pd ->
   k pa pb pc pd
+
+
+constByteArray5 :: (ByteArrayAccess a, ByteArrayAccess b, ByteArrayAccess c, ByteArrayAccess d, ByteArrayAccess e)
+                => a -> b -> c -> d -> e
+                -> (BaPtr -> BaPtr -> BaPtr -> BaPtr -> BaPtr -> IO e)
+                -> IO e
+constByteArray5 a b c d e k =
+  B.withByteArray a $ \pa ->
+  B.withByteArray b $ \pb ->
+  B.withByteArray c $ \pc ->
+  B.withByteArray d $ \pd ->
+  B.withByteArray e $ \pe ->
+  k pa pb pc pd pe
 
 
 -- | Treats a 'ByteArray' as a little endian bitstring and increments

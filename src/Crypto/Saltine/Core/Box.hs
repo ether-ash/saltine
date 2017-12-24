@@ -189,9 +189,6 @@ box (PK pk) (SK sk) (Nonce nonce) msg =
   snd . buildUnsafeByteArray bufSize $ \pc ->
     constByteArray4 pk sk msg nonce $ \ppk psk pm pn ->
       c_box_easy pc pm (fromIntegral msgLen) pn ppk psk
-    -- constByteStrings [pk, sk, msg, nonce] $ \
-    --   [(ppk, _), (psk, _), (pm, _), (pn, _)] ->
-    --     c_box_easy pc pm (fromIntegral msgLen) pn ppk psk
   where
     bufSize = S.length msg + Bytes.boxMac
     msgLen  = S.length msg
@@ -208,9 +205,6 @@ boxOpen (PK pk) (SK sk) (Nonce nonce) cipher =
   let (err, vec) = buildUnsafeByteArray bufSize $ \pm ->
         constByteArray4 pk sk cipher nonce $ \ppk psk pc pn ->
           c_box_open_easy pm pc (fromIntegral msgLen) pn ppk psk
-        -- constByteStrings [pk, sk, cipher, nonce] $ \
-        --   [(ppk, _), (psk, _), (pc, _), (pn, _)] ->
-        --     c_box_open_easy pm pc (fromIntegral msgLen) pn ppk psk
   in hush . handleErrno err $ vec
   where
     bufSize = S.length cipher - Bytes.boxMac
@@ -227,9 +221,6 @@ boxAfterNM (CK ck) (Nonce nonce) msg =
   snd . buildUnsafeByteArray bufSize $ \pc ->
     constByteArray3 ck msg nonce $ \pck pm pn ->
       c_box_easy_afternm pc pm (fromIntegral msgLen) pn pck
-    -- constByteStrings [ck, msg, nonce] $ \
-    --   [(pck, _), (pm, _), (pn, _)] ->
-    --     c_box_easy_afternm pc pm (fromIntegral msgLen) pn pck
   where
     bufSize = S.length msg + Bytes.boxMac
     msgLen  = S.length msg
@@ -245,9 +236,6 @@ boxOpenAfterNM (CK ck) (Nonce nonce) cipher =
   let (err, vec) = buildUnsafeByteArray bufSize $ \pm ->
         constByteArray3 ck cipher nonce $ \pck pc pn ->
           c_box_open_easy_afternm pm pc (fromIntegral msgLen) pn pck
-        -- constByteStrings [ck, cipher, nonce] $ \
-        --   [(pck, _), (pc, _), (pn, _)] ->
-        --     c_box_open_easy_afternm pm pc (fromIntegral msgLen) pn pck
   in hush . handleErrno err $ vec
   where
     bufSize = S.length cipher - Bytes.boxMac
@@ -260,9 +248,6 @@ boxSeal :: PublicKey -> ByteString -> IO ByteString
 boxSeal (PK pk) msg = fmap snd . buildUnsafeByteArray' bufSize $ \pc ->
   constByteArray2 pk msg $ \ppk pm ->
     c_box_seal pc pm (fromIntegral msgLen) ppk
-    -- constByteStrings [pk, msg] $ \
-    --   [(ppk, _), (pm, _)] ->
-    --     c_box_seal pc pm (fromIntegral msgLen) ppk
   where
     bufSize = S.length msg + Bytes.sealedBox
     msgLen  = S.length msg
@@ -281,9 +266,6 @@ boxSealOpen (PK pk) (SK sk) cipher =
   let (err, vec) = buildUnsafeByteArray bufSize $ \pm ->
         constByteArray3 pk sk cipher $ \ppk psk pc ->
           c_box_seal_open pm pc (fromIntegral msgLen) ppk psk
-        -- constByteStrings [pk, sk, cipher] $ \
-        --   [(ppk, _), (psk, _), (pc, _)] ->
-        --   c_box_seal_open pm pc (fromIntegral msgLen) ppk psk
   in hush . handleErrno err $ vec
   where
     bufSize = S.length cipher - Bytes.sealedBox
