@@ -1,11 +1,11 @@
-{ mkDerivation, base, bytestring, libsodium, profunctors
+{ mkDerivation, base, bytestring, libsodium, memory, profunctors
 , QuickCheck, stdenv, test-framework, test-framework-quickcheck2
 }:
 mkDerivation {
   pname = "saltine";
   version = "0.1.0.0";
   src = ./.;
-  libraryHaskellDepends = [ base bytestring profunctors ];
+  libraryHaskellDepends = [ base bytestring memory profunctors ];
   libraryPkgconfigDepends = [ libsodium ];
   testHaskellDepends = [
     base bytestring QuickCheck test-framework
