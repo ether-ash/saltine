@@ -50,36 +50,38 @@ import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
 import           Control.Applicative
 import           Foreign.C
 import           Foreign.Ptr
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString                   as S
 import           Data.ByteString                     (ByteString)
 
 -- $types
 
 -- | An opaque 'auth' cryptographic key.
-newtype Key           = Key ByteString deriving (Eq, Ord)
+newtype Key           = Key ScrubbedBytes deriving (Eq, Ord)
 
 -- | An opaque 'auth' authenticator.
-newtype Authenticator = Au ByteString  deriving (Eq, Ord)
+newtype Authenticator = Au Bytes  deriving (Eq, Ord)
 
 instance IsEncoding Key where
-  decode v = if S.length v == Bytes.authKey
-           then Just (Key v)
+  decode v = if B.length v == Bytes.authKey
+           then Just (Key $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Key v) = v
+  encode (Key v) = B.convert v
   {-# INLINE encode #-}
 
 instance IsEncoding Authenticator where
-  decode v = if S.length v == Bytes.auth
-           then Just (Au v)
+  decode v = if B.length v == Bytes.auth
+           then Just (Au $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Au v) = v
+  encode (Au v) = B.convert v
   {-# INLINE encode #-}
 
 -- | Creates a random key of the correct size for 'auth' and 'verify'.
 newKey :: IO Key
-newKey = Key <$> randomByteString Bytes.authKey
+newKey = Key <$> randomByteArray Bytes.authKey
 
 -- | Computes an keyed authenticator 'ByteString' from a message. It
 -- is infeasible to forge these authenticators without the key, even
@@ -90,9 +92,10 @@ auth :: Key
      -- ^ Message
      -> Authenticator
 auth (Key key) msg =
-  Au . snd . buildUnsafeByteString Bytes.auth $ \pa ->
-    constByteStrings [key, msg] $ \[(pk, _), (pm, mlen)] ->
-    c_auth pa pm (fromIntegral mlen) pk
+  Au . snd . buildUnsafeByteArray Bytes.auth $ \pa ->
+    constByteArray2 key msg $ \pk pm ->
+      c_auth pa pm (fromIntegral mlen) pk
+  where mlen = B.length msg
 
 -- | Checks to see if an authenticator is a correct proof that a
 -- message was signed by some key.
@@ -103,8 +106,9 @@ verify :: Key
        -> Bool
        -- ^ Is this message authentic?
 verify (Key key) (Au a) msg =
-  unsafeDidSucceed $ constByteStrings [key, msg, a] $ \[(pk, _), (pm, mlen), (pa, _)] ->
+  unsafeDidSucceed $ constByteArray3 key msg a $ \pk pm pa ->
     return $ c_auth_verify pa pm (fromIntegral mlen) pk
+  where mlen = B.length msg
 
 foreign import ccall "crypto_auth"
   c_auth :: Ptr CChar
