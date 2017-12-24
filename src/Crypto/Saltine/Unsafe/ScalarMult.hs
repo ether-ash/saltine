@@ -61,41 +61,43 @@ import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
 
 import           Foreign.C
 import           Foreign.Ptr
+import qualified Data.ByteArray                    as B
+import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
 import qualified Data.ByteString                   as S
 import           Data.ByteString                     (ByteString)
 
 -- $types
 
 -- | A group element.
-newtype GroupElement = GE ByteString deriving (Eq)
+newtype GroupElement = GE ScrubbedBytes deriving (Eq)
 
 -- | A scalar integer.
-newtype Scalar       = Sc ByteString deriving (Eq)
+newtype Scalar       = Sc ScrubbedBytes deriving (Eq)
 
 instance IsEncoding GroupElement where
-  decode v = if S.length v == Bytes.mult
-           then Just (GE v)
+  decode v = if B.length v == Bytes.mult
+           then Just (GE $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (GE v) = v
+  encode (GE v) = B.convert v
   {-# INLINE encode #-}
 
 instance IsEncoding Scalar where
-  decode v = if S.length v == Bytes.multScalar
-           then Just (Sc v)
+  decode v = if B.length v == Bytes.multScalar
+           then Just (Sc $ B.convert v)
            else Nothing
   {-# INLINE decode #-}
-  encode (Sc v) = v
+  encode (Sc v) = B.convert v
   {-# INLINE encode #-}
 
 mult :: Scalar -> GroupElement -> GroupElement
-mult (Sc n) (GE p) = GE . snd . buildUnsafeByteString Bytes.mult $ \pq ->
-  constByteStrings [n, p] $ \[(pn, _), (pp, _)] ->
+mult (Sc n) (GE p) = GE . snd . buildUnsafeByteArray Bytes.mult $ \pq ->
+  constByteArray2 n p $ \pn pp ->
     c_scalarmult pq pn pp
 
 multBase :: Scalar -> GroupElement
-multBase (Sc n) = GE . snd . buildUnsafeByteString Bytes.mult $ \pq ->
-  constByteStrings [n] $ \[(pn, _)] ->
+multBase (Sc n) = GE . snd . buildUnsafeByteArray Bytes.mult $ \pq ->
+  constByteArray n $ \pn ->
     c_scalarmult_base pq pn
 
 foreign import ccall "crypto_scalarmult"
