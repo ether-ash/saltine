@@ -1,10 +1,8 @@
 module Crypto.Saltine.Unsafe.Sign (
   SecretKey, PublicKey, Keypair, Seed,
-  newKeypair,
+  newKeypair, seedKeypair, derivePublicKey,
   sign, signOpen,
-  signDetached, signVerifyDetached,
-  seedKeypair,
-  derivePublicKey
+  signDetached, signVerifyDetached
   ) where
 
 import           Crypto.Saltine.Class

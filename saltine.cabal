@@ -37,20 +37,21 @@ library
   hs-source-dirs:     src
   exposed-modules:
                   Crypto.Saltine
-                  Crypto.Saltine.Internal.ByteSizes
-                  Crypto.Saltine.Core.SecretBox
                   Crypto.Saltine.Core.AEAD
-                  Crypto.Saltine.Core.Box
                   Crypto.Saltine.Core.Auth
-                  Crypto.Saltine.Core.OneTimeAuth
-                  Crypto.Saltine.Core.Sign
+                  Crypto.Saltine.Core.Box
                   Crypto.Saltine.Core.Hash
+                  Crypto.Saltine.Core.OneTimeAuth
                   Crypto.Saltine.Core.Random
+                  Crypto.Saltine.Core.SecretBox
+                  Crypto.Saltine.Core.Sign
                   Crypto.Saltine.Class
+                  Crypto.Saltine.Internal.ByteSizes
                   Crypto.Saltine.Unsafe.AEAD
                   Crypto.Saltine.Unsafe.Box
                   Crypto.Saltine.Unsafe.Hash
                   Crypto.Saltine.Unsafe.ScalarMult
+                  Crypto.Saltine.Unsafe.SecretBox
                   Crypto.Saltine.Unsafe.Sign
                   Crypto.Saltine.Unsafe.Stream
   other-modules:
@@ -82,12 +83,13 @@ test-suite tests
                 HashProperties
                 OneTimeAuthProperties
                 ScalarMultProperties
-                SecretBoxProperties
                 SealedBoxProperties
+                SecretBoxProperties
                 SignProperties
                 StreamProperties
                 UnsafeAEADProperties
                 UnsafeBoxProperties
+                UnsafeSecretBoxProperties
                 Util
   ghc-options: -Wall -threaded -rtsopts
   hs-source-dirs: tests

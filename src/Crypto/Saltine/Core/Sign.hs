@@ -27,7 +27,7 @@
 
 module Crypto.Saltine.Core.Sign (
   U.SecretKey, U.PublicKey, U.Keypair,
-  U.newKeypair,
+  U.newKeypair, U.derivePublicKey,
   U.sign, U.signOpen,
   U.signDetached, U.signVerifyDetached
   ) where

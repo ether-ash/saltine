@@ -24,11 +24,13 @@
 -- composition paradigm," Lecture Notes in Computer Science 1976
 -- (2000), 531–545, <http://www-cse.ucsd.edu/~mihir/papers/oem.html>.
 --
--- Note that the length is not hidden. Note also that it is the
--- caller's responsibility to ensure the uniqueness of nonces—for
--- example, by using nonce 1 for the first message, nonce 2 for the
--- second message, etc. Nonces are long enough that randomly generated
--- nonces have negligible risk of collision.
+-- Note that the length is not hidden. Unlike
+-- "Crypto.Saltine.Unsafe.SecretBox", this module prevents nonce
+-- reuse vulnerabilities by generating a new random nonce on every
+-- call to 'secretbox'. The nonce is included in the ciphertext
+-- (format: @nonce || ciphertext@) to remove the sudden death
+-- properties of normal @xsalsa20poly1305@ while maintaining full
+-- interoperability with unsafe versions of the scheme.
 --
 -- "Crypto.Saltine.Core.SecretBox" is
 -- @crypto_secretbox_xsalsa20poly1305@, a particular combination of
@@ -38,189 +40,67 @@
 --
 -- This is version 2010.08.30 of the secretbox.html web page.
 module Crypto.Saltine.Core.SecretBox (
-  Key, Nonce,
+  U.Key,
   secretbox, secretboxOpen,
   secretboxDetached, secretboxOpenDetached,
-  newKey, newNonce
+  U.newKey,
   ) where
 
 import           Crypto.Saltine.Class
-import           Crypto.Saltine.Internal.Util
 import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
+import           Crypto.Saltine.Internal.Util
+import qualified Crypto.Saltine.Unsafe.SecretBox   as U
 
-import           Control.Applicative
-import           Foreign.C
-import           Foreign.Ptr
-import qualified Data.ByteArray         as B
-import           Data.ByteArray           (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
-import qualified Data.ByteString                   as S
+import qualified Data.ByteArray                    as B
 import           Data.ByteString                     (ByteString)
 
--- $types
-
--- | An opaque 'secretbox' cryptographic key.
-newtype Key = Key ScrubbedBytes deriving (Eq, Ord)
-
-instance IsEncoding Key where
-  decode v = if B.length v == Bytes.secretBoxKey
-           then Just (Key $ B.convert v)
-           else Nothing
-  {-# INLINE decode #-}
-  encode (Key v) = B.convert v
-  {-# INLINE encode #-}
-
--- | An opaque 'secretbox' nonce.
-newtype Nonce = Nonce Bytes deriving (Eq, Ord)
-
-instance IsEncoding Nonce where
-  decode v = if B.length v == Bytes.secretBoxNonce
-           then Just (Nonce $ B.convert v)
-           else Nothing
-  {-# INLINE decode #-}
-  encode (Nonce v) = B.convert v
-  {-# INLINE encode #-}
-
-instance IsNonce Nonce where
-  zero            = Nonce (B.replicate Bytes.secretBoxNonce 0)
-  nudge (Nonce n) = Nonce (nudgeBA n)
-
--- | Creates a random key of the correct size for 'secretbox'.
-newKey :: IO Key
-newKey = Key <$> randomByteArray Bytes.secretBoxKey
-
--- | Creates a random nonce of the correct size for 'secretbox'.
-newNonce :: IO Nonce
-newNonce = Nonce <$> randomByteArray Bytes.secretBoxNonce
-
 -- | Encrypts a message. It is infeasible for an attacker to decrypt
--- the message so long as the 'Nonce' is never repeated.
-secretbox :: Key -> Nonce
+-- the message as a random nonce is prepended to the message.
+secretbox :: U.Key
           -> ByteString
           -- ^ Message
-          -> ByteString
+          -> IO ByteString
           -- ^ Ciphertext
-secretbox (Key key) (Nonce nonce) msg =
-  unpad' . snd . buildUnsafeByteArray len $ \pc ->
-    constByteArray3 key (pad' msg) nonce $ \pk pm pn ->
-      c_secretbox pc pm (fromIntegral len) pn pk
-  where len    = S.length msg + Bytes.secretBoxZero
-        pad'   = pad Bytes.secretBoxZero
-        unpad' = unpad Bytes.secretBoxBoxZero
+secretbox key msg = do
+  nonce <- U.newNonce
+  let ciphertext = U.secretbox key nonce msg
+  return $ B.append (encode nonce) ciphertext
 
 -- | Encrypts a message. In contrast with 'secretbox', the result is not
 -- serialized as one element and instead provided as an authentication tag and
 -- ciphertext.
-secretboxDetached :: Key -> Nonce
-          -> ByteString
-          -- ^ Message
-          -> (ByteString,ByteString)
-          -- ^ (Authentication Tag, Ciphertext)
-secretboxDetached (Key key) (Nonce nonce) msg =
-  buildUnsafeByteArray ctLen $ \pc ->
-   fmap snd . buildUnsafeByteArray' tagLen $ \ptag ->
-    constByteArray3 key msg nonce $ \pk pmsg pn ->
-      c_secretbox_detached pc ptag pmsg (fromIntegral ptLen) pn pk
-  where ctLen  = ptLen
-        ptLen  = S.length msg
-        tagLen = Bytes.secretBoxMac
+secretboxDetached :: U.Key
+                  -> ByteString
+                  -- ^ Message
+                  -> IO (ByteString,ByteString)
+                  -- ^ (Authentication Tag, Ciphertext)
+secretboxDetached key msg = do
+  nonce <- U.newNonce
+  let (tag, ciphertext) = U.secretboxDetached key nonce msg
+  return (tag, B.append (encode nonce) ciphertext)
 
 -- | Decrypts a message. Returns 'Nothing' if the keys and message do
 -- not match.
-secretboxOpen :: Key -> Nonce
-                 -> ByteString
-                 -- ^ Ciphertext
-                 -> Maybe ByteString
-                 -- ^ Message
-secretboxOpen (Key key) (Nonce nonce) cipher =
-  let (err, vec) = buildUnsafeByteArray len $ \pm ->
-        constByteArray3 key (pad' cipher) nonce $ \pk pc pn ->
-          c_secretbox_open pm pc (fromIntegral len) pn pk
-  in hush . handleErrno err $ unpad' vec
-  where len    = S.length cipher + Bytes.secretBoxBoxZero
-        pad'   = pad Bytes.secretBoxBoxZero
-        unpad' = unpad Bytes.secretBoxZero
+secretboxOpen :: U.Key
+              -> ByteString
+              -- ^ Ciphertext
+              -> Maybe ByteString
+              -- ^ Message
+secretboxOpen key cipher = do
+  let (n, c) = split Bytes.secretBoxNonce cipher
+  nonce <- decode n
+  U.secretboxOpen key nonce c
 
 -- | Decrypts a message. Returns 'Nothing' if the keys and message do
 -- not match.
-secretboxOpenDetached :: Key -> Nonce
-                 -> ByteString
-                 -- ^ Auth Tag
-                 -> ByteString
-                 -- ^ Ciphertext
-                 -> Maybe ByteString
-                 -- ^ Message
-secretboxOpenDetached (Key key) (Nonce nonce) tag cipher
-    | S.length tag /= Bytes.secretBoxMac = Nothing
-    | otherwise =
-  let (err, vec) = buildUnsafeByteArray len $ \pm ->
-        constByteArray4 key cipher tag nonce $ \pk pc pt pn ->
-          c_secretbox_open_detached pm pc pt (fromIntegral len) pn pk
-        -- constByteStrings [key, cipher, tag, nonce] $ \
-        --   [(pk, _), (pc, _), (pt, _), (pn, _)] ->
-        --     c_secretbox_open_detached pm pc pt (fromIntegral len) pn pk
-  in hush . handleErrno err $ vec
-  where len    = S.length cipher
-
--- | The secretbox C API uses 0-padded C strings. Always returns 0.
-foreign import ccall "crypto_secretbox"
-  c_secretbox :: Ptr CChar
-              -- ^ Cipher 0-padded output buffer
-              -> Ptr CChar
-              -- ^ Constant 0-padded message input buffer
-              -> CULLong
-              -- ^ Length of message input buffer (incl. 0s)
-              -> Ptr CChar
-              -- ^ Constant nonce buffer
-              -> Ptr CChar
-              -- ^ Constant key buffer
-              -> IO CInt
-
--- | The secretbox_detached C API uses C strings. Always returns 0.
-foreign import ccall "crypto_secretbox_detached"
-  c_secretbox_detached
-              :: Ptr CChar
-              -- ^ Ciphertext output buffer
-              -> Ptr CChar
-              -- ^ Authentication tag output buffer
-              -> Ptr CChar
-              -- ^ Constant message input buffer
-              -> CULLong
-              -- ^ Length of message input buffer (incl. 0s)
-              -> Ptr CChar
-              -- ^ Constant nonce buffer
-              -> Ptr CChar
-              -- ^ Constant key buffer
-              -> IO CInt
-
--- | The secretbox C API uses 0-padded C strings. Returns 0 if
--- successful or -1 if verification failed.
-foreign import ccall "crypto_secretbox_open"
-  c_secretbox_open :: Ptr CChar
-                   -- ^ Message 0-padded output buffer
-                   -> Ptr CChar
-                   -- ^ Constant 0-padded message input buffer
-                   -> CULLong
-                   -- ^ Length of message input buffer (incl. 0s)
-                   -> Ptr CChar
-                   -- ^ Constant nonce buffer
-                   -> Ptr CChar
-                   -- ^ Constant key buffer
-                   -> IO CInt
-
--- | The secretbox C API uses C strings. Returns 0 if
--- successful or -1 if verification failed.
-foreign import ccall "crypto_secretbox_open_detached"
-  c_secretbox_open_detached
-                   :: Ptr CChar
-                   -- ^ Message output buffer
-                   -> Ptr CChar
-                   -- ^ Constant ciphertext input buffer
-                   -> Ptr CChar
-                   -- ^ Constant auth tag input buffer
-                   -> CULLong
-                   -- ^ Length of ciphertext input buffer
-                   -> Ptr CChar
-                   -- ^ Constant nonce buffer
-                   -> Ptr CChar
-                   -- ^ Constant key buffer
-                   -> IO CInt
+secretboxOpenDetached :: U.Key
+                      -> ByteString
+                      -- ^ Auth Tag
+                      -> ByteString
+                      -- ^ Ciphertext
+                      -> Maybe ByteString
+                      -- ^ Message
+secretboxOpenDetached key tag cipher = do
+  let (n, c) = split Bytes.secretBoxNonce cipher
+  nonce <- decode n
+  U.secretboxOpenDetached key nonce tag c

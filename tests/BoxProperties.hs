@@ -65,7 +65,7 @@ testBox = buildTest $ do
   let ck_1for2 = beforeNM sk1 pk2
       ck_2for1 = beforeNM sk2 pk1
 
-  return $ testGroup "...Internal.Box" [
+  return $ testGroup "...Core.Box" [
 
     testGroup "Can decrypt ciphertext using..." [
 

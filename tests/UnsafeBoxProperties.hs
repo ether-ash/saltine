@@ -93,7 +93,7 @@ testUnsafeBox = buildTest $ do
   n1 <- newNonce
   n2 <- newNonce
 
-  return $ testGroup "...Internal.Box" [
+  return $ testGroup "...Unsafe.Box" [
 
     testGroup "Can decrypt ciphertext using..." [
 

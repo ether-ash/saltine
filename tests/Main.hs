@@ -2,19 +2,20 @@
 
 module Main where
 
-import SecretBoxProperties   (testSecretBox)
-import AEADProperties        (testAEAD)
-import BoxProperties         (testBox)
-import SealedBoxProperties   (testSealedBox)
-import StreamProperties      (testStream)
-import AuthProperties        (testAuth)
-import OneTimeAuthProperties (testOneTimeAuth)
-import SignProperties        (testSign)
-import ScalarMultProperties  (testScalarMult)
-import HashProperties        (testHash)
-import ByteSizeProperties    (testByteSizes)
-import UnsafeAEADProperties  (testUnsafeAEAD)
-import UnsafeBoxProperties   (testUnsafeBox)
+import SecretBoxProperties       (testSecretBox)
+import AEADProperties            (testAEAD)
+import BoxProperties             (testBox)
+import SealedBoxProperties       (testSealedBox)
+import StreamProperties          (testStream)
+import AuthProperties            (testAuth)
+import OneTimeAuthProperties     (testOneTimeAuth)
+import SignProperties            (testSign)
+import ScalarMultProperties      (testScalarMult)
+import HashProperties            (testHash)
+import ByteSizeProperties        (testByteSizes)
+import UnsafeAEADProperties      (testUnsafeAEAD)
+import UnsafeBoxProperties       (testUnsafeBox)
+import UnsafeSecretBoxProperties (testUnsafeSecretBox)
 import Crypto.Saltine
 
 import Test.Framework
@@ -35,6 +36,7 @@ main = do
         testUnsafeBox,
         testSealedBox,
         testSecretBox,
+        testUnsafeSecretBox,
         testAEAD,
         testUnsafeAEAD,
         testStream,
