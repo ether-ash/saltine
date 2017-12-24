@@ -74,15 +74,15 @@ deriveKeypairProp
 deriveKeypairProp n (ByteString32 s1) (ByteString32 s2) (Message m) =
   let Just seed1 = decode $ S.take Bytes.boxSeed s1
       Just seed2 = decode $ S.take Bytes.boxSeed s2
-      (sk1, pk1) = deriveKeypair seed1
-      (sk2, pk2) = deriveKeypair seed2
+      (sk1, pk1) = seedKeypair seed1
+      (sk2, pk2) = seedKeypair seed2
   in Just m == boxOpen pk1 sk2 n (box pk2 sk1 n m)
 
 derivePublicKeyProp
   :: ByteString32 -> Bool
 derivePublicKeyProp (ByteString32 s) =
   let Just seed = decode $ S.take Bytes.boxSeed s
-      (sk, pk) = deriveKeypair seed
+      (sk, pk) = seedKeypair seed
   in pk == derivePublicKey sk
 
 testBox :: Test

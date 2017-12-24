@@ -47,6 +47,7 @@ library
                   Crypto.Saltine.Core.Hash
                   Crypto.Saltine.Core.Random
                   Crypto.Saltine.Class
+                  Crypto.Saltine.Unsafe.AEAD
                   Crypto.Saltine.Unsafe.Box
                   Crypto.Saltine.Unsafe.Hash
                   Crypto.Saltine.Unsafe.ScalarMult
@@ -54,6 +55,7 @@ library
                   Crypto.Saltine.Unsafe.Stream
   other-modules:
                   Crypto.Saltine.Internal.Util
+                  Crypto.Saltine.Unsafe.ScalarMult.Internal
 
   if os(windows)
     extra-libraries: sodium

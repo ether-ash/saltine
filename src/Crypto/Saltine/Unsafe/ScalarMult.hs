@@ -58,13 +58,10 @@ module Crypto.Saltine.Unsafe.ScalarMult (
 import           Crypto.Saltine.Class
 import           Crypto.Saltine.Internal.Util
 import qualified Crypto.Saltine.Internal.ByteSizes as Bytes
+import           Crypto.Saltine.Unsafe.ScalarMult.Internal
 
-import           Foreign.C
-import           Foreign.Ptr
 import qualified Data.ByteArray                    as B
-import           Data.ByteArray                      (ByteArrayAccess, ByteArray, Bytes, ScrubbedBytes)
-import qualified Data.ByteString                   as S
-import           Data.ByteString                     (ByteString)
+import           Data.ByteArray                      (ScrubbedBytes)
 
 -- $types
 
@@ -99,21 +96,3 @@ multBase :: Scalar -> GroupElement
 multBase (Sc n) = GE . snd . buildUnsafeByteArray Bytes.mult $ \pq ->
   constByteArray n $ \pn ->
     c_scalarmult_base pq pn
-
-foreign import ccall "crypto_scalarmult"
-  c_scalarmult :: Ptr CChar
-               -- ^ Output group element buffer
-               -> Ptr CChar
-               -- ^ Input integer buffer
-               -> Ptr CChar
-               -- ^ Input group element buffer
-               -> IO CInt
-               -- ^ Always 0
-
-foreign import ccall "crypto_scalarmult_base"
-  c_scalarmult_base :: Ptr CChar
-                    -- ^ Output group element buffer
-                    -> Ptr CChar
-                    -- ^ Input integer buffer
-                    -> IO CInt
-                    -- ^ Always 0
