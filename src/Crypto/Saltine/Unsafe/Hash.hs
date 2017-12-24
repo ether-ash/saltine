@@ -25,8 +25,8 @@ generichash :: ByteString
             -> Maybe GenerichashKey
             -- ^ Optional key
             -> ByteString
-generichash m len Nothing        = generichashInternal m len S.empty
-generichash m len (Just (GhK k)) = generichashInternal m len k
+generichash m len Nothing        = generichash' m len B.empty
+generichash m len (Just (GhK k)) = generichash' m len k
 
 -- | An opaque 'generichashKeyed' cryptographic secret key.
 newtype GenerichashKey = GhK ScrubbedBytes deriving (Eq, Ord)
@@ -44,15 +44,15 @@ newGenerichashKey :: IO GenerichashKey
 newGenerichashKey = GhK <$> randomByteArray Bytes.generichashKey
 
 
-generichashInternal :: ByteString
-                    -> Int
-                    -> ByteString
-                    -> ByteString
-generichashInternal m len k
+generichash' :: ByteString
+             -> Int
+             -> ScrubbedBytes
+             -> ByteString
+generichash' m len k
   | Bytes.generichashMin <= len && len <= Bytes.generichashMax
   = snd . buildUnsafeByteArray len $ \ph ->
       constByteArray2 k m $ \pk pm ->
-        c_generichash ph (fromIntegral len) pm (fromIntegral $ S.length m) pk (fromIntegral $ S.length k)
+        c_generichash ph (fromIntegral len) pm (fromIntegral $ S.length m) pk (fromIntegral $ B.length k)
   | otherwise
   = error $ "incorrect length: " ++ show len ++ ", should be between "
     ++ show Bytes.generichashMin ++ " and " ++ show Bytes.generichashMax
